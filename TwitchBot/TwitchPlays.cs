@@ -147,19 +147,23 @@ namespace TwitchBot
             synthesizer.SpeakAsync(prompt);
         }
 
-        public static void SpeechSynth(string input, int customRate = -2)
+        public static void SpeechSynth(string input, int customRate = -100)
         {
             Trace.WriteLine("SpeechSynth received: " + input);
 
             SpeechSynthesizer synthesizer = new SpeechSynthesizer();
             synthesizer.Volume = GlobalVars.SPEECHSYNTH_VOL;
-            synthesizer.Rate = customRate;
+            if (customRate == -100)
+                synthesizer.Rate = GlobalVars.SPEECHSYNTH_RATE;
+            else
+                synthesizer.Rate = customRate;
 
             Prompt prompt = new Prompt(input);
 
             synthesizer.SpeakAsync(prompt);
         }
 
+        /*
         public static void SpeechSynthSync(string input)
         {
             Trace.WriteLine("SpeechSynth received: " + input);
@@ -172,14 +176,18 @@ namespace TwitchBot
 
             synthesizer.Speak(prompt);
         }
+        */
 
-        public static void SpeechSynthSync(string input, int customRate = -2)
+        public static void SpeechSynthSync(string input, int customRate = -100)
         {
             Trace.WriteLine("SpeechSynth received: " + input);
 
             SpeechSynthesizer synthesizer = new SpeechSynthesizer();
             synthesizer.Volume = GlobalVars.SPEECHSYNTH_VOL;
-            synthesizer.Rate = customRate;
+            if (customRate == -100)
+                synthesizer.Rate = GlobalVars.SPEECHSYNTH_RATE;
+            else
+                synthesizer.Rate = customRate;
 
             Prompt prompt = new Prompt(input);
 
@@ -261,7 +269,7 @@ namespace TwitchBot
 
                     //spawn cheese
                     case "cheese":
-                        if (random.Next(1, 2) == 1)
+                        if (random.Next(1, 6) == 1)
                         {
                             SpeechSynth("spawning cheese");
 
@@ -271,12 +279,9 @@ namespace TwitchBot
                         break;
                     //spawn 5 tomato and 5 cabbage soup
                     case "soup":
-                        if (random.Next(1, 2) == 1)
+                        if (random.Next(1, 6) == 1)
                         {
-                            if(random.Next(1, 51) == 1)
-                                SpeechSynth("spawning soup", -10);
-                            else
-                                SpeechSynth("spawning soup");
+                            SpeechSynth("spawning soup");
 
                             SetForegroundWindow(handle);
                             inputSim.Keyboard.KeyPress(VirtualKeyCode.NUMPAD1);
@@ -284,7 +289,7 @@ namespace TwitchBot
                         break;
                     //spawn 10 wine
                     case "wine":
-                        if (random.Next(1, 2) == 1)
+                        if (random.Next(1, 6) == 1)
                         {
                             SpeechSynth("spawning wine...you alcoholic");
 
@@ -293,7 +298,7 @@ namespace TwitchBot
                         }
                         break;
                     case "num3":
-                        if (random.Next(1, 2) == 1)
+                        if (random.Next(1, 11) == 1)
                         {
                             SpeechSynth("spawning num3");
 
@@ -302,7 +307,7 @@ namespace TwitchBot
                         }
                         break;
                     case "num4":
-                        if (random.Next(1, 2) == 1)
+                        if (random.Next(1, 11) == 1)
                         {
                             SpeechSynth("spawning num4");
 
@@ -311,7 +316,7 @@ namespace TwitchBot
                         }
                         break;
                     case "num5":
-                        if (random.Next(1, 2) == 1)
+                        if (random.Next(1, 11) == 1)
                         {
                             SpeechSynth("spawning num5");
 
@@ -320,7 +325,7 @@ namespace TwitchBot
                         }
                         break;
                     case "num6":
-                        if (random.Next(1, 2) == 1)
+                        if (random.Next(1, 11) == 1)
                         {
                             SpeechSynth("spawning num6");
 
@@ -329,7 +334,7 @@ namespace TwitchBot
                         }
                         break;
                     case "num7":
-                        if (random.Next(1, 2) == 1)
+                        if (random.Next(1, 11) == 1)
                         {
                             SpeechSynth("spawning num7");
 
@@ -349,7 +354,7 @@ namespace TwitchBot
                         break;
                     //spawn 10 dragons
                     case "dragon":
-                        if (random.Next(1, 2) == 1)
+                        if (random.Next(1, 31) == 1)
                         {
                             SpeechSynth("spawning dragons. good luck");
 
@@ -358,7 +363,7 @@ namespace TwitchBot
                         }
                         break;
                     case "cheesemageddon":
-                        if (random.Next(1, 2) == 1)
+                        if (random.Next(1, 31) == 1)
                         {
                             SpeechSynth("It's time for calcium!");
 
@@ -368,7 +373,7 @@ namespace TwitchBot
                         }
                         break;
                     case "soupmageddon":
-                        if (random.Next(1, 2) == 1)
+                        if (random.Next(1, 31) == 1)
                         {
                             SpeechSynth("Blame Buzz");
 

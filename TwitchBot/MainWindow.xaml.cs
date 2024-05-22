@@ -658,6 +658,7 @@ namespace TwitchBot
                     APINinjaFacts[] result = JsonConvert.DeserializeObject<APINinjaFacts[]>(stringResponse);
 
                     OwnerOfChannelConnection.SendMessage(TwitchChannelName, result[0].fact);
+                    TwitchPlays.SpeechSynthSync(result[0].fact);
                 }
             }
             catch (Exception except)
@@ -683,6 +684,7 @@ namespace TwitchBot
                     APINinjaDadJokes[] result = JsonConvert.DeserializeObject<APINinjaDadJokes[]>(stringResponse);
 
                     OwnerOfChannelConnection.SendMessage(TwitchChannelName, result[0].joke);
+                    TwitchPlays.SpeechSynthSync(result[0].joke);
                 }
             }
             catch (Exception except)
