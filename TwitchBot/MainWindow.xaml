@@ -1,0 +1,17 @@
+﻿<Window x:Class="TwitchBot.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:TwitchBot"
+        mc:Ignorable="d"
+        Title="Twitch Bot" Height="445" Width="553" Closing="MainWindow_Closing" ResizeMode="NoResize">
+    <Grid x:Name="Twitch_Bot" Background="#FFE4D3BF">
+        <Button Name="connectToTwitch" Content="Connect to Twitch" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Height="39" Width="144" Click="connectToTwitch_Click"/>
+        <TextBox Name="ConsoleLog" HorizontalAlignment="Center" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="533" Height="301" x:FieldModifier="public" Margin="0,54,0,0"/>
+        <Button Name="twitchPlaysButton" Content="Start Twtich Plays" HorizontalAlignment="Left" Margin="10,360,0,0" VerticalAlignment="Top" Height="38" Width="144" Click="TwitchPlaysButton_Click"/>
+        <Button x:Name="OBSConnectionButton" Content="Connect to OBS" HorizontalAlignment="Left" Margin="159,360,0,0" VerticalAlignment="Top" Height="38" Width="144" Click="ConnectToOBS_Click" IsEnabled="false"/>
+        <Button x:Name="yetToBeFilledButton" Content="Null" HorizontalAlignment="Left" Margin="308,360,0,0" VerticalAlignment="Top" Height="38" Width="144" IsEnabled="false"/>
+
+    </Grid>
+</Window>

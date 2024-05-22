@@ -1,0 +1,18 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="TwitchBot.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="clientid" Type="System.String" Scope="User">
+      <Value Profile="(Default)">b35io4wr1yt2k6n9frnfllkraeymo5</Value>
+    </Setting>
+    <Setting Name="clientsecret" Type="System.String" Scope="User">
+      <Value Profile="(Default)">9xxjmh1pbnl0vzvwdsx8seh8ja8huc</Value>
+    </Setting>
+    <Setting Name="APINinjaKey" Type="System.String" Scope="User">
+      <Value Profile="(Default)">CH6huP8qYlSvHeOhvB9vcQ==bCNTg08FarvFkV9I</Value>
+    </Setting>
+    <Setting Name="OBSWebSocketAuth" Type="System.String" Scope="User">
+      <Value Profile="(Default)">B8HxqfVm10b9oc6a</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>
