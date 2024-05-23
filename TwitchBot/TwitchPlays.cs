@@ -19,15 +19,21 @@ namespace TwitchBot
         public static readonly int SPEECHSYNTH_RATE = -2;
     }
 
+    //--------------------------------------------------------------------------------------------------------------------------------
+    //ADD POTIONS SPAWN, CHANGE GIANT FROST SPIDERS TO NORMAL FROST SPIDERS, LYDIA SPAWNS TO DEFEND PLAYER (5?), SPAWN 4 BEARS INSTEAD OF 10
+    //--------------------------------------------------------------------------------------------------------------------------------
+
     internal class TwitchPlays
     {
         //SimulateKeyPress SimKeyPress = new SimulateKeyPress();
         InputSimulator inputSim = new InputSimulator();
 
+        public SpeechSynthesis synth = new SpeechSynthesis();
+
         [DllImport("User32.dll")]
         static extern int SetForegroundWindow(IntPtr point);
 
-        //there is probably a less brute force way to do this
+        //initial attempt to enter skyrim commands (without using papyrus script)
         void SimulateWordInput(string input)
         {
             Trace.WriteLine(input + "\n");
@@ -133,67 +139,6 @@ namespace TwitchBot
             }
         }
 
-        //speech synth test
-        public static void SpeechSynth(string input)
-        {
-            Trace.WriteLine("SpeechSynth received: " + input);
-
-            SpeechSynthesizer synthesizer = new SpeechSynthesizer();
-            synthesizer.Volume = GlobalVars.SPEECHSYNTH_VOL;
-            synthesizer.Rate = GlobalVars.SPEECHSYNTH_RATE;
-
-            Prompt prompt = new Prompt(input);
-
-            synthesizer.SpeakAsync(prompt);
-        }
-
-        public static void SpeechSynth(string input, int customRate = -100)
-        {
-            Trace.WriteLine("SpeechSynth received: " + input);
-
-            SpeechSynthesizer synthesizer = new SpeechSynthesizer();
-            synthesizer.Volume = GlobalVars.SPEECHSYNTH_VOL;
-            if (customRate == -100)
-                synthesizer.Rate = GlobalVars.SPEECHSYNTH_RATE;
-            else
-                synthesizer.Rate = customRate;
-
-            Prompt prompt = new Prompt(input);
-
-            synthesizer.SpeakAsync(prompt);
-        }
-
-        /*
-        public static void SpeechSynthSync(string input)
-        {
-            Trace.WriteLine("SpeechSynth received: " + input);
-
-            SpeechSynthesizer synthesizer = new SpeechSynthesizer();
-            synthesizer.Volume = GlobalVars.SPEECHSYNTH_VOL;
-            synthesizer.Rate = GlobalVars.SPEECHSYNTH_RATE;
-
-            Prompt prompt = new Prompt(input);
-
-            synthesizer.Speak(prompt);
-        }
-        */
-
-        public static void SpeechSynthSync(string input, int customRate = -100)
-        {
-            Trace.WriteLine("SpeechSynth received: " + input);
-
-            SpeechSynthesizer synthesizer = new SpeechSynthesizer();
-            synthesizer.Volume = GlobalVars.SPEECHSYNTH_VOL;
-            if (customRate == -100)
-                synthesizer.Rate = GlobalVars.SPEECHSYNTH_RATE;
-            else
-                synthesizer.Rate = customRate;
-
-            Prompt prompt = new Prompt(input);
-
-            synthesizer.Speak(prompt);
-        }
-
         //Twitch plays Skyrim SE
         public void TwitchPlaysSkyrim(OnMessageReceivedArgs e)
         {
@@ -252,13 +197,15 @@ namespace TwitchBot
                         Thread.Sleep(1000);
                         inputSim.Keyboard.KeyUp(VirtualKeyCode.VK_D);
                         break;
-                    case "walk":
-                        SetForegroundWindow(handle);
-                        inputSim.Keyboard.KeyDown(VirtualKeyCode.LSHIFT);
-                        break;
-                    case "run":
-                        inputSim.Keyboard.KeyUp(VirtualKeyCode.LSHIFT);
-                        break;
+                    
+                    //case "walk":
+                    //    SetForegroundWindow(handle);
+                    //    inputSim.Keyboard.KeyDown(VirtualKeyCode.LSHIFT);
+                    //    break;
+                    //case "run":
+                    //    inputSim.Keyboard.KeyUp(VirtualKeyCode.LSHIFT);
+                    //    break;
+                    
                     case "jump":
                         SetForegroundWindow(handle);
                         inputSim.Keyboard.KeyPress(VirtualKeyCode.SPACE);
@@ -269,113 +216,127 @@ namespace TwitchBot
 
                     //spawn cheese
                     case "cheese":
-                        if (random.Next(1, 6) == 1)
+                        if (random.Next(1, 2) == 1)
                         {
-                            SpeechSynth("spawning cheese");
+                            synth.SpeechSynth("spawning cheese");
 
                             SetForegroundWindow(handle);
                             inputSim.Keyboard.KeyPress(VirtualKeyCode.NUMPAD0);
                         }
                         break;
-                    //spawn 5 tomato and 5 cabbage soup
+                    //spawn tomato and cabbage soup
                     case "soup":
-                        if (random.Next(1, 6) == 1)
+                        if (random.Next(1, 2) == 1)
                         {
-                            SpeechSynth("spawning soup");
+                            synth.SpeechSynth("spawning soup");
 
                             SetForegroundWindow(handle);
                             inputSim.Keyboard.KeyPress(VirtualKeyCode.NUMPAD1);
                         }
                         break;
-                    //spawn 10 wine
+                    //spawn wine
                     case "wine":
-                        if (random.Next(1, 6) == 1)
+                        if (random.Next(1, 2) == 1)
                         {
-                            SpeechSynth("spawning wine...you alcoholic");
+                            synth.SpeechSynth("spawning wine");
 
                             SetForegroundWindow(handle);
                             inputSim.Keyboard.KeyPress(VirtualKeyCode.NUMPAD2);
                         }
                         break;
-                    case "num3":
-                        if (random.Next(1, 11) == 1)
+                    //spawn rabbits
+                    case "rabbit":
+                    case "rabbits":
+                        if (random.Next(1, 3) == 1)
                         {
-                            SpeechSynth("spawning num3");
+                            synth.SpeechSynth("spawning rabbits");
 
                             SetForegroundWindow(handle);
                             inputSim.Keyboard.KeyPress(VirtualKeyCode.NUMPAD3);
                         }
                         break;
-                    case "num4":
+                    //spawn skeevers
+                    case "skeever":
+                    case "skeevers":
                         if (random.Next(1, 11) == 1)
                         {
-                            SpeechSynth("spawning num4");
+                            synth.SpeechSynth("spawning skeevers");
 
                             SetForegroundWindow(handle);
                             inputSim.Keyboard.KeyPress(VirtualKeyCode.NUMPAD4);
                         }
                         break;
-                    case "num5":
-                        if (random.Next(1, 11) == 1)
+                    //spawn healing, magicka, and stamina potions
+                    case "potion":
+                    case "potions":
+                        if (random.Next(1, 6) == 1)
                         {
-                            SpeechSynth("spawning num5");
+                            synth.SpeechSynth("spawning potions");
 
                             SetForegroundWindow(handle);
                             inputSim.Keyboard.KeyPress(VirtualKeyCode.NUMPAD5);
                         }
                         break;
-                    case "num6":
+                    //spawn bears
+                    case "bear":
+                    case "bears":
                         if (random.Next(1, 11) == 1)
                         {
-                            SpeechSynth("spawning num6");
+                            synth.SpeechSynth("spawning bears");
 
                             SetForegroundWindow(handle);
                             inputSim.Keyboard.KeyPress(VirtualKeyCode.NUMPAD6);
                         }
                         break;
-                    case "num7":
-                        if (random.Next(1, 11) == 1)
+                    //spawn lydias
+                    case "lydia":
+                    case "lydias":
+                        if (random.Next(1, 6) == 1)
                         {
-                            SpeechSynth("spawning num7");
+                            synth.SpeechSynth("spawning lydia");
 
                             SetForegroundWindow(handle);
                             inputSim.Keyboard.KeyPress(VirtualKeyCode.NUMPAD7);
                         }
                         break;
-                    //spawn 10 siders
+                    //spawn siders
                     case "spider":
+                    case "spiders":
                         if (random.Next(1, 11) == 1)
                         {
-                            SpeechSynth("spawning spiders");
+                            synth.SpeechSynth("spawning spiders");
 
                             SetForegroundWindow(handle);
                             inputSim.Keyboard.KeyPress(VirtualKeyCode.NUMPAD8);
                         }
                         break;
-                    //spawn 10 dragons
+                    //spawn dragons
                     case "dragon":
-                        if (random.Next(1, 31) == 1)
+                    case "dragons":
+                        if (random.Next(1, 21) == 1)
                         {
-                            SpeechSynth("spawning dragons. good luck");
+                            synth.SpeechSynth("spawning dragons. good luck");
 
                             SetForegroundWindow(handle);
                             inputSim.Keyboard.KeyPress(VirtualKeyCode.NUMPAD9);
                         }
                         break;
+                    //spam spawn cheese command
                     case "cheesemageddon":
-                        if (random.Next(1, 31) == 1)
+                        if (random.Next(1, 16) == 1)
                         {
-                            SpeechSynth("It's time for calcium!");
+                            synth.SpeechSynth("It's time for calcium!");
 
                             SetForegroundWindow(handle);
                             for (int x = 1; x <= 100; x++)
                                 inputSim.Keyboard.KeyPress(VirtualKeyCode.NUMPAD0);
                         }
                         break;
+                    //spam spawn soup command
                     case "soupmageddon":
-                        if (random.Next(1, 31) == 1)
+                        if (random.Next(1, 16) == 1)
                         {
-                            SpeechSynth("Blame Buzz");
+                            synth.SpeechSynth("Blame Buzz");
 
                             SetForegroundWindow(handle);
                             for (int x = 1; x <= 100; x++)

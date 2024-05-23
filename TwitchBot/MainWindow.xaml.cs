@@ -66,6 +66,7 @@ namespace TwitchBot
         //Global objects
         TwitchPlays TwitchPlaysObj;    //only gets an object when TwitchPlays is enabled
         InputSimulator inSim = new InputSimulator();
+        public SpeechSynthesis SpeechSynth = new SpeechSynthesis();
 
         //Bot Commands
         readonly Dictionary<string, string> CommandsStaticResponses = new Dictionary<string, string>
@@ -323,11 +324,13 @@ namespace TwitchBot
                     Random random = new Random();
                     int randRate = random.Next(1, 21) - 10;
 
-                    TwitchPlays.SpeechSynthSync(e.RewardRedeemed.Redemption.UserInput, randRate);
+                    //TwitchPlays.SpeechSynthSync(e.RewardRedeemed.Redemption.UserInput, randRate);
+                    SpeechSynth.SpeechSynthSync(e.RewardRedeemed.Redemption.UserInput, randRate);
 
                     break;
                 case "tts (normal speech rate)":
-                    TwitchPlays.SpeechSynthSync(e.RewardRedeemed.Redemption.UserInput);
+                    //TwitchPlays.SpeechSynthSync(e.RewardRedeemed.Redemption.UserInput);
+                    SpeechSynth.SpeechSynthSync(e.RewardRedeemed.Redemption.UserInput);
                     break;
             }
         }
@@ -480,6 +483,16 @@ namespace TwitchBot
                 if (commandText.Equals("joke"))
                 {
                     new Thread(APINinjaGetDadJoke).Start();
+                }
+                //
+                //------------------------------------------------------------------------------------------------------------------
+                //
+                //Tell user what skyrim spawn commands are avaialble
+                if (commandText.Equals("skyrim"))
+                {
+                    string skyrimCommands = "You can mess with skyrim by saying any of the following: forward, back, stop, left, right, jump, " +
+                        "cheese, soup, wine, potions, rabbits, skeevers, bears, lydia, spiders, dragons, cheesemageddon, ans soupmageddon";
+                    OwnerOfChannelConnection.SendMessage(TwitchChannelName, skyrimCommands);
                 }
 
             }
@@ -639,6 +652,8 @@ namespace TwitchBot
 
             System.Media.SoundPlayer twitchPlaysStartup = new System.Media.SoundPlayer("C:\\Users\\timot\\source\\repos\\TwitchBot\\Twitch Plays startup sound.wav");
             twitchPlaysStartup.Play();
+
+            SpeechSynth.SpeechSynthSync("Twitch Plays is now live");
         }
 
         async private void APINinjaGetFact()
@@ -658,7 +673,8 @@ namespace TwitchBot
                     APINinjaFacts[] result = JsonConvert.DeserializeObject<APINinjaFacts[]>(stringResponse);
 
                     OwnerOfChannelConnection.SendMessage(TwitchChannelName, result[0].fact);
-                    TwitchPlays.SpeechSynthSync(result[0].fact);
+                    //TwitchPlays.SpeechSynthSync(result[0].fact);
+                    SpeechSynth.SpeechSynthSync(result[0].fact);
                 }
             }
             catch (Exception except)
@@ -684,7 +700,8 @@ namespace TwitchBot
                     APINinjaDadJokes[] result = JsonConvert.DeserializeObject<APINinjaDadJokes[]>(stringResponse);
 
                     OwnerOfChannelConnection.SendMessage(TwitchChannelName, result[0].joke);
-                    TwitchPlays.SpeechSynthSync(result[0].joke);
+                    //TwitchPlays.SpeechSynthSync(result[0].joke);
+                    SpeechSynth.SpeechSynthSync(result[0].joke);
                 }
             }
             catch (Exception except)
