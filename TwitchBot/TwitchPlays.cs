@@ -218,7 +218,12 @@ namespace TwitchBot
                     case "cheese":
                         if (random.Next(1, 2) == 1)
                         {
-                            synth.SpeechSynth("spawning cheese");
+                            //call TTS method like this to allow for speach overlap (normally waits for the previous message to finish before the next starts)
+                            new Thread(delegate () {
+                                SpeechSynthesis skyrimTTS = new SpeechSynthesis();
+
+                                skyrimTTS.SpeechSynth("spawning cheese");
+                            }).Start();
 
                             SetForegroundWindow(handle);
                             inputSim.Keyboard.KeyPress(VirtualKeyCode.NUMPAD0);
@@ -228,7 +233,11 @@ namespace TwitchBot
                     case "soup":
                         if (random.Next(1, 2) == 1)
                         {
-                            synth.SpeechSynth("spawning soup");
+                            new Thread(delegate () {
+                                SpeechSynthesis skyrimTTS = new SpeechSynthesis();
+
+                                skyrimTTS.SpeechSynth("spawning soup");
+                            }).Start();
 
                             SetForegroundWindow(handle);
                             inputSim.Keyboard.KeyPress(VirtualKeyCode.NUMPAD1);
@@ -238,7 +247,11 @@ namespace TwitchBot
                     case "wine":
                         if (random.Next(1, 2) == 1)
                         {
-                            synth.SpeechSynth("spawning wine");
+                            new Thread(delegate () {
+                                SpeechSynthesis skyrimTTS = new SpeechSynthesis();
+
+                                skyrimTTS.SpeechSynth("spawning wine");
+                            }).Start();
 
                             SetForegroundWindow(handle);
                             inputSim.Keyboard.KeyPress(VirtualKeyCode.NUMPAD2);
@@ -249,7 +262,11 @@ namespace TwitchBot
                     case "rabbits":
                         if (random.Next(1, 3) == 1)
                         {
-                            synth.SpeechSynth("spawning rabbits");
+                            new Thread(delegate () {
+                                SpeechSynthesis skyrimTTS = new SpeechSynthesis();
+
+                                skyrimTTS.SpeechSynth("spawning rabbits");
+                            }).Start();
 
                             SetForegroundWindow(handle);
                             inputSim.Keyboard.KeyPress(VirtualKeyCode.NUMPAD3);
@@ -260,7 +277,11 @@ namespace TwitchBot
                     case "skeevers":
                         if (random.Next(1, 11) == 1)
                         {
-                            synth.SpeechSynth("spawning skeevers");
+                            new Thread(delegate () {
+                                SpeechSynthesis skyrimTTS = new SpeechSynthesis();
+
+                                skyrimTTS.SpeechSynth("spawning skeevers");
+                            }).Start();
 
                             SetForegroundWindow(handle);
                             inputSim.Keyboard.KeyPress(VirtualKeyCode.NUMPAD4);
@@ -271,7 +292,11 @@ namespace TwitchBot
                     case "potions":
                         if (random.Next(1, 6) == 1)
                         {
-                            synth.SpeechSynth("spawning potions");
+                            new Thread(delegate () {
+                                SpeechSynthesis skyrimTTS = new SpeechSynthesis();
+
+                                skyrimTTS.SpeechSynth("spawning potions");
+                            }).Start();
 
                             SetForegroundWindow(handle);
                             inputSim.Keyboard.KeyPress(VirtualKeyCode.NUMPAD5);
@@ -282,7 +307,11 @@ namespace TwitchBot
                     case "bears":
                         if (random.Next(1, 11) == 1)
                         {
-                            synth.SpeechSynth("spawning bears");
+                            new Thread(delegate () {
+                                SpeechSynthesis skyrimTTS = new SpeechSynthesis();
+
+                                skyrimTTS.SpeechSynth("spawning bears");
+                            }).Start();
 
                             SetForegroundWindow(handle);
                             inputSim.Keyboard.KeyPress(VirtualKeyCode.NUMPAD6);
@@ -293,7 +322,11 @@ namespace TwitchBot
                     case "lydias":
                         if (random.Next(1, 6) == 1)
                         {
-                            synth.SpeechSynth("spawning lydia");
+                            new Thread(delegate () {
+                                SpeechSynthesis skyrimTTS = new SpeechSynthesis();
+
+                                skyrimTTS.SpeechSynth("spawning lydia");
+                            }).Start();
 
                             SetForegroundWindow(handle);
                             inputSim.Keyboard.KeyPress(VirtualKeyCode.NUMPAD7);
@@ -304,7 +337,11 @@ namespace TwitchBot
                     case "spiders":
                         if (random.Next(1, 11) == 1)
                         {
-                            synth.SpeechSynth("spawning spiders");
+                            new Thread(delegate () {
+                                SpeechSynthesis skyrimTTS = new SpeechSynthesis();
+
+                                skyrimTTS.SpeechSynth("spawning spiders");
+                            }).Start();
 
                             SetForegroundWindow(handle);
                             inputSim.Keyboard.KeyPress(VirtualKeyCode.NUMPAD8);
@@ -315,7 +352,11 @@ namespace TwitchBot
                     case "dragons":
                         if (random.Next(1, 21) == 1)
                         {
-                            synth.SpeechSynth("spawning dragons. good luck");
+                            new Thread(delegate () {
+                                SpeechSynthesis skyrimTTS = new SpeechSynthesis();
+
+                                skyrimTTS.SpeechSynth("spawning dragons. good luck!");
+                            }).Start();
 
                             SetForegroundWindow(handle);
                             inputSim.Keyboard.KeyPress(VirtualKeyCode.NUMPAD9);
@@ -325,7 +366,11 @@ namespace TwitchBot
                     case "cheesemageddon":
                         if (random.Next(1, 16) == 1)
                         {
-                            synth.SpeechSynth("It's time for calcium!");
+                            new Thread(delegate () {
+                                SpeechSynthesis skyrimTTS = new SpeechSynthesis();
+
+                                skyrimTTS.SpeechSynth("It's time for calcium!");
+                            }).Start();
 
                             SetForegroundWindow(handle);
                             for (int x = 1; x <= 100; x++)
@@ -336,7 +381,11 @@ namespace TwitchBot
                     case "soupmageddon":
                         if (random.Next(1, 16) == 1)
                         {
-                            synth.SpeechSynth("Blame Buzz");
+                            new Thread(delegate () {
+                                SpeechSynthesis skyrimTTS = new SpeechSynthesis();
+
+                                skyrimTTS.SpeechSynth("Blame Buzz");
+                            }).Start();
 
                             SetForegroundWindow(handle);
                             for (int x = 1; x <= 100; x++)

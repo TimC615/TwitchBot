@@ -5,13 +5,13 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TwitchBot"
         mc:Ignorable="d"
-        Title="Twitch Bot" Height="445" Width="553" Closing="MainWindow_Closing" ResizeMode="NoResize">
-    <Grid x:Name="Twitch_Bot" Background="#FFE4D3BF">
+        Title="Twitch Bot" Height="466" Width="553" Closing="MainWindow_Closing" ResizeMode="NoResize">
+    <Grid x:Name="Twitch_Bot" Background="#FFE4D3BF" Margin="0,0,0,-6">
         <Button Name="connectToTwitch" Content="Connect to Twitch" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Height="39" Width="144" Click="connectToTwitch_Click"/>
-        <TextBox Name="ConsoleLog" HorizontalAlignment="Center" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="533" Height="301" x:FieldModifier="public" Margin="0,54,0,0"/>
+        <TextBox Name="ConsoleLog" HorizontalAlignment="Center" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="533" Height="301" x:FieldModifier="public" Margin="0,54,0,0" IsReadOnly="True"/>
         <Button Name="twitchPlaysButton" Content="Start Twtich Plays" HorizontalAlignment="Left" Margin="10,360,0,0" VerticalAlignment="Top" Height="38" Width="144" Click="TwitchPlaysButton_Click"/>
         <Button x:Name="OBSConnectionButton" Content="Connect to OBS" HorizontalAlignment="Left" Margin="159,360,0,0" VerticalAlignment="Top" Height="38" Width="144" Click="ConnectToOBS_Click" IsEnabled="false"/>
-        <Button x:Name="yetToBeFilledButton" Content="Null" HorizontalAlignment="Left" Margin="308,360,0,0" VerticalAlignment="Top" Height="38" Width="144" IsEnabled="false"/>
+        <Button x:Name="yetToBeFilledButton" Content="Null" HorizontalAlignment="Left" Margin="308,360,0,0" VerticalAlignment="Top" Height="38" Width="144" IsEnabled="False"/>
 
     </Grid>
 </Window>

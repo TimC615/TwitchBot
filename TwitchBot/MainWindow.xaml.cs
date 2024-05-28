@@ -325,12 +325,12 @@ namespace TwitchBot
                     int randRate = random.Next(1, 21) - 10;
 
                     //TwitchPlays.SpeechSynthSync(e.RewardRedeemed.Redemption.UserInput, randRate);
-                    SpeechSynth.SpeechSynthSync(e.RewardRedeemed.Redemption.UserInput, randRate);
+                    SpeechSynth.SpeechSynth(e.RewardRedeemed.Redemption.UserInput, randRate);
 
                     break;
                 case "tts (normal speech rate)":
                     //TwitchPlays.SpeechSynthSync(e.RewardRedeemed.Redemption.UserInput);
-                    SpeechSynth.SpeechSynthSync(e.RewardRedeemed.Redemption.UserInput);
+                    SpeechSynth.SpeechSynth(e.RewardRedeemed.Redemption.UserInput);
                     break;
             }
         }
@@ -491,7 +491,7 @@ namespace TwitchBot
                 if (commandText.Equals("skyrim"))
                 {
                     string skyrimCommands = "You can mess with skyrim by saying any of the following: forward, back, stop, left, right, jump, " +
-                        "cheese, soup, wine, potions, rabbits, skeevers, bears, lydia, spiders, dragons, cheesemageddon, ans soupmageddon";
+                        "cheese, soup, wine, potions, rabbits, skeevers, bears, lydia, spiders, dragons, cheesemageddon, and soupmageddon";
                     OwnerOfChannelConnection.SendMessage(TwitchChannelName, skyrimCommands);
                 }
 
@@ -558,9 +558,12 @@ namespace TwitchBot
         */
 
         //Sends log messages to both the user form and console
-        void Log(string printMessage)
+        public void Log(string printMessage)
         {
-            Action writeToConsoleLog = () => ConsoleLog.AppendText("\n" + printMessage);
+            Action writeToConsoleLog = () => {
+                ConsoleLog.AppendText("\n" + printMessage);
+                ConsoleLog.ScrollToEnd();
+                };
 
             Dispatcher.BeginInvoke(writeToConsoleLog);
 
@@ -653,7 +656,7 @@ namespace TwitchBot
             System.Media.SoundPlayer twitchPlaysStartup = new System.Media.SoundPlayer("C:\\Users\\timot\\source\\repos\\TwitchBot\\Twitch Plays startup sound.wav");
             twitchPlaysStartup.Play();
 
-            SpeechSynth.SpeechSynthSync("Twitch Plays is now live");
+            SpeechSynth.SpeechSynth("Twitch Plays is now live");
         }
 
         async private void APINinjaGetFact()
@@ -674,7 +677,7 @@ namespace TwitchBot
 
                     OwnerOfChannelConnection.SendMessage(TwitchChannelName, result[0].fact);
                     //TwitchPlays.SpeechSynthSync(result[0].fact);
-                    SpeechSynth.SpeechSynthSync(result[0].fact);
+                    SpeechSynth.SpeechSynth(result[0].fact);
                 }
             }
             catch (Exception except)
@@ -701,7 +704,7 @@ namespace TwitchBot
 
                     OwnerOfChannelConnection.SendMessage(TwitchChannelName, result[0].joke);
                     //TwitchPlays.SpeechSynthSync(result[0].joke);
-                    SpeechSynth.SpeechSynthSync(result[0].joke);
+                    SpeechSynth.SpeechSynth(result[0].joke);
                 }
             }
             catch (Exception except)
