@@ -19,10 +19,6 @@ namespace TwitchBot
         public static readonly int SPEECHSYNTH_RATE = -2;
     }
 
-    //--------------------------------------------------------------------------------------------------------------------------------
-    //ADD POTIONS SPAWN, CHANGE GIANT FROST SPIDERS TO NORMAL FROST SPIDERS, LYDIA SPAWNS TO DEFEND PLAYER (5?), SPAWN 4 BEARS INSTEAD OF 10
-    //--------------------------------------------------------------------------------------------------------------------------------
-
     internal class TwitchPlays
     {
         //SimulateKeyPress SimKeyPress = new SimulateKeyPress();
@@ -216,7 +212,7 @@ namespace TwitchBot
 
                     //spawn cheese
                     case "cheese":
-                        if (random.Next(1, 2) == 1)
+                        if (random.Next(1, 4) == 1)
                         {
                             //call TTS method like this to allow for speach overlap (normally waits for the previous message to finish before the next starts)
                             new Thread(delegate () {
@@ -231,7 +227,7 @@ namespace TwitchBot
                         break;
                     //spawn tomato and cabbage soup
                     case "soup":
-                        if (random.Next(1, 2) == 1)
+                        if (random.Next(1, 4) == 1)
                         {
                             new Thread(delegate () {
                                 SpeechSynthesis skyrimTTS = new SpeechSynthesis();
@@ -245,7 +241,7 @@ namespace TwitchBot
                         break;
                     //spawn wine
                     case "wine":
-                        if (random.Next(1, 2) == 1)
+                        if (random.Next(1, 4) == 1)
                         {
                             new Thread(delegate () {
                                 SpeechSynthesis skyrimTTS = new SpeechSynthesis();
@@ -260,7 +256,7 @@ namespace TwitchBot
                     //spawn rabbits
                     case "rabbit":
                     case "rabbits":
-                        if (random.Next(1, 3) == 1)
+                        if (random.Next(1, 6) == 1)
                         {
                             new Thread(delegate () {
                                 SpeechSynthesis skyrimTTS = new SpeechSynthesis();
@@ -320,7 +316,7 @@ namespace TwitchBot
                     //spawn lydias
                     case "lydia":
                     case "lydias":
-                        if (random.Next(1, 6) == 1)
+                        if (random.Next(1, 11) == 1)
                         {
                             new Thread(delegate () {
                                 SpeechSynthesis skyrimTTS = new SpeechSynthesis();

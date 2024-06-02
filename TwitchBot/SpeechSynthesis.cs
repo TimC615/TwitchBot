@@ -29,13 +29,14 @@ namespace TwitchBot
     when messages are preferred to be overlapping. threads will automatically be closed once TTS is finished
     */
 
-    public class SpeechSynthesis
+    class SpeechSynthesis
     {
-        public static readonly int SPEECHSYNTH_VOL = 80;
-        public static readonly int SPEECHSYNTH_RATE = -2;
+        static readonly int SPEECHSYNTH_VOL = 80;
+        static readonly int SPEECHSYNTH_RATE = 0;
 
         SpeechSynthesizer synth = new SpeechSynthesizer();
 
+        //use for general TTS needs
         public void SpeechSynth(string input, int customRate = -100)
         {
             Trace.WriteLine("SpeechSynth received: " + input);
@@ -59,10 +60,12 @@ namespace TwitchBot
             synth.Speak(prompt);
         }
 
-        //doesn't seem to be needed
+
         public void SpeechSynthAsync(string input, int customRate = -100)
         {
             Trace.WriteLine("SpeechSynth received: " + input);
+
+            synth.SpeakCompleted += synth_SpeakComplete;
 
             synth.Volume = SPEECHSYNTH_VOL;
             if (customRate == -100)
@@ -73,6 +76,11 @@ namespace TwitchBot
             Prompt prompt = new Prompt(input);
 
             synth.SpeakAsync(prompt);
+        }
+
+        void synth_SpeakComplete(object sender, System.Speech.Synthesis.SpeakCompletedEventArgs e)
+        {
+            //MainWindow.DisableObsTtsFace();
         }
     }
 }

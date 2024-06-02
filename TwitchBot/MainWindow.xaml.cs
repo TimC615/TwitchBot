@@ -26,6 +26,20 @@ using System;
 
 //If code throws a web socket permissions error, open run window, search for "services.msc",
 //and stop "World Wide Web Publishing Service". Should clear up port 80 (needed for when the local web server is created)
+
+
+
+//---------------------------------------------------------------------------------------------------------------------------
+//Add in spotify "now playing" info in the corner of OBS (maybe youtube info also if possible?)
+//if using specifically spotify api, can add in points redeem for users to add requested song to queue
+//look into TUNA plugin
+//instead of pulling from spotify API directly, possibly look into Windows' global media player info. Aka see if windows is playing a
+//song/video/thing and get info from there
+
+//maybe put in timed messages (eg: after 30 min shout out socials and following)
+
+//maybe put in automatic discord messaging? (eg: hey i'm live messages)
+//---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
 {
     public partial class MainWindow : Window
@@ -66,7 +80,7 @@ namespace TwitchBot
         //Global objects
         TwitchPlays TwitchPlaysObj;    //only gets an object when TwitchPlays is enabled
         InputSimulator inSim = new InputSimulator();
-        public SpeechSynthesis SpeechSynth = new SpeechSynthesis();
+        SpeechSynthesis SpeechSynthObj = new SpeechSynthesis();
 
         //Bot Commands
         readonly Dictionary<string, string> CommandsStaticResponses = new Dictionary<string, string>
@@ -321,16 +335,43 @@ namespace TwitchBot
                     }
                     break;
                 case "tts (random speech rate)":
-                    Random random = new Random();
-                    int randRate = random.Next(1, 21) - 10;
+                    try
+                    {
+                        Random random = new Random();
+                        int randRate = random.Next(1, 21) - 10;
 
-                    //TwitchPlays.SpeechSynthSync(e.RewardRedeemed.Redemption.UserInput, randRate);
-                    SpeechSynth.SpeechSynth(e.RewardRedeemed.Redemption.UserInput, randRate);
+                        string currSceneName = obs.GetCurrentProgramScene();
+                        int ttsItemID = obs.GetSceneItemId(currSceneName, "TwitchChatFace", 0);
+                        obs.SetSceneItemEnabled(currSceneName, ttsItemID, true);
 
+
+                        //SpeechSynthObj.SpeechSynth(e.RewardRedeemed.Redemption.UserInput, randRate);
+                        SpeechSynthObj.SpeechSynthAsync(e.RewardRedeemed.Redemption.UserInput, randRate);
+
+                        //disable TTS face
+                    }
+                    catch (Exception err)
+                    {
+                        Log("Random speech TTS Error: " + err.Message);
+                    }
                     break;
                 case "tts (normal speech rate)":
-                    //TwitchPlays.SpeechSynthSync(e.RewardRedeemed.Redemption.UserInput);
-                    SpeechSynth.SpeechSynth(e.RewardRedeemed.Redemption.UserInput);
+                    try
+                    {
+                        string currSceneName = obs.GetCurrentProgramScene();
+                        int ttsItemID = obs.GetSceneItemId(currSceneName, "TwitchChatFace", 0);
+                        obs.SetSceneItemEnabled(currSceneName, ttsItemID, true);
+
+                        //TwitchPlays.SpeechSynthSync(e.RewardRedeemed.Redemption.UserInput);
+                        SpeechSynthObj.SpeechSynthAsync(e.RewardRedeemed.Redemption.UserInput);
+
+                        //disable TTS face
+                    }
+                    catch (Exception err)
+                    {
+                        Log("Normal speech TTS Error: " + err.Message);
+                    }
+
                     break;
             }
         }
@@ -656,7 +697,7 @@ namespace TwitchBot
             System.Media.SoundPlayer twitchPlaysStartup = new System.Media.SoundPlayer("C:\\Users\\timot\\source\\repos\\TwitchBot\\Twitch Plays startup sound.wav");
             twitchPlaysStartup.Play();
 
-            SpeechSynth.SpeechSynth("Twitch Plays is now live");
+            SpeechSynthObj.SpeechSynth("Twitch Plays is now live");
         }
 
         async private void APINinjaGetFact()
@@ -677,7 +718,7 @@ namespace TwitchBot
 
                     OwnerOfChannelConnection.SendMessage(TwitchChannelName, result[0].fact);
                     //TwitchPlays.SpeechSynthSync(result[0].fact);
-                    SpeechSynth.SpeechSynth(result[0].fact);
+                    SpeechSynthObj.SpeechSynth(result[0].fact);
                 }
             }
             catch (Exception except)
@@ -704,7 +745,7 @@ namespace TwitchBot
 
                     OwnerOfChannelConnection.SendMessage(TwitchChannelName, result[0].joke);
                     //TwitchPlays.SpeechSynthSync(result[0].joke);
-                    SpeechSynth.SpeechSynth(result[0].joke);
+                    SpeechSynthObj.SpeechSynth(result[0].joke);
                 }
             }
             catch (Exception except)
