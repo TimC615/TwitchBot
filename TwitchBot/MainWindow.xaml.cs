@@ -17,6 +17,11 @@ using Newtonsoft.Json;
 using OBSWebsocketDotNet;
 using TwitchLib.Communication.Interfaces;
 using System;
+using SpotifyAPI.Web;
+using SpotifyAPI.Web.Auth;
+using Swan.Parsers;
+using OBSWebsocketDotNet.Types;
+using System.Linq;
 
 
 //Base functionality taken from HonestDanGames' Youtube channel https://youtu.be/Ufgq6_QhVKw?si=QYBbDl0sYVCy3QVF
@@ -67,6 +72,15 @@ namespace TwitchBot
 
         //OBS Websocket
         protected OBSWebsocket obs;
+        private string ttsSceneName;
+        private SceneItemDetails ttsSceneItem;
+
+        //Spotify API
+        //private static HttpClient spotifyAPIConnection { get; set; }
+        //private SpotifyClientConfig spotifyClientConfig { get; set; }
+        protected static SpotifyClient spotify;
+        protected static string spotifyAccessToken;
+        private static EmbedIOAuthServer _server;
 
         //Cached Variables
         private string CachedOwnerOfChannelAccessToken = "needsaccesstoken"; //cached due to potentially being needed for API requests
@@ -234,6 +248,78 @@ namespace TwitchBot
             //https://github.com/BarRaider/obs-websocket-dotnet/blob/master/obs-websocket-dotnet/OBSWebsocket_Requests.cs
         }
 
+
+
+
+        /*
+        void InitializeSpotifyAPI()
+        {
+            var loginRequest = new LoginRequest(
+                new Uri("http://localhost:3000"),
+                Properties.Settings.Default.SpotifyClientId,
+                LoginRequest.ResponseType.Code)
+            {
+                Scope = new[] { Scopes.PlaylistReadPrivate, Scopes.PlaylistReadCollaborative }
+            };
+            var uri = loginRequest.ToUri;
+        }
+        */
+
+        public static async Task InitializeSpotifyAPI()
+        {
+            // Make sure "http://localhost:5543/callback" is in your spotify application as redirect uri!
+            _server = new EmbedIOAuthServer(new Uri("http://localhost:5543/callback"), 5543);
+            await _server.Start();
+
+            _server.AuthorizationCodeReceived += OnAuthorizationCodeReceived;
+            _server.ErrorReceived += OnErrorReceived;
+
+            var request = new LoginRequest(_server.BaseUri, "ClientId", LoginRequest.ResponseType.Code)
+            {
+                //Scope = new List<string> { "Scopes.UserReadEmail" }
+                //Scope = new List<string> { "Scopes.UserReadEmail" }
+            };
+            BrowserUtil.Open(request.ToUri());
+        }
+
+        private static async Task OnAuthorizationCodeReceived(object sender, AuthorizationCodeResponse response)
+        {
+            await _server.Stop();
+
+            var config = SpotifyClientConfig.CreateDefault();
+            var tokenResponse = await new OAuthClient(config).RequestToken(
+                new AuthorizationCodeTokenRequest(
+                    Properties.Settings.Default.SpotifyClientId,
+                    Properties.Settings.Default.SpotifyClientSecret,
+                    response.Code,
+                    new Uri("http://localhost:5543/callback")
+                )
+            );
+
+            spotifyAccessToken = tokenResponse.AccessToken;
+            spotify = new SpotifyClient(spotifyAccessToken);
+            // do calls with Spotify and save token?
+
+            var track = await spotify.Tracks.Get("1s6ux0lNiTziSrd7iUAADH");
+            Console.WriteLine(track.Name);
+        }
+
+        private static async Task OnErrorReceived(object sender, string error, string state)
+        {
+            Console.WriteLine($"Aborting authorization, error received: {error}");
+            await _server.Stop();
+        }
+
+        private void SetSpotifyAccessToken(string token)
+        {
+            spotifyAccessToken = token;
+        }
+
+
+
+
+
+
         //OBS Event Hookups
         private void obs_onConnect(object sender, EventArgs e)
         {
@@ -258,7 +344,8 @@ namespace TwitchBot
             }
         }
 
-        //PubSub Event Hookups
+
+        //----------------PubSub Event Hookups----------------
         private void PubSub_OnPubSubServiceConnected(object sender, EventArgs e)
         {
             PubSub.SendTopics(CachedOwnerOfChannelAccessToken);
@@ -334,48 +421,64 @@ namespace TwitchBot
                         }
                     }
                     break;
+
+                //tts doesn't work if TwitchFace isn't in scene
                 case "tts (random speech rate)":
-                    try
-                    {
-                        Random random = new Random();
-                        int randRate = random.Next(1, 21) - 10;
+                    Random random = new Random();
+                    int randRate = random.Next(1, 21) - 10;
 
-                        string currSceneName = obs.GetCurrentProgramScene();
-                        int ttsItemID = obs.GetSceneItemId(currSceneName, "TwitchChatFace", 0);
-                        obs.SetSceneItemEnabled(currSceneName, ttsItemID, true);
-
-
-                        //SpeechSynthObj.SpeechSynth(e.RewardRedeemed.Redemption.UserInput, randRate);
-                        SpeechSynthObj.SpeechSynthAsync(e.RewardRedeemed.Redemption.UserInput, randRate);
-
-                        //disable TTS face
-                    }
-                    catch (Exception err)
-                    {
-                        Log("Random speech TTS Error: " + err.Message);
-                    }
+                    ttsRedeem(e, randRate);
                     break;
+
                 case "tts (normal speech rate)":
-                    try
-                    {
-                        string currSceneName = obs.GetCurrentProgramScene();
-                        int ttsItemID = obs.GetSceneItemId(currSceneName, "TwitchChatFace", 0);
-                        obs.SetSceneItemEnabled(currSceneName, ttsItemID, true);
-
-                        //TwitchPlays.SpeechSynthSync(e.RewardRedeemed.Redemption.UserInput);
-                        SpeechSynthObj.SpeechSynthAsync(e.RewardRedeemed.Redemption.UserInput);
-
-                        //disable TTS face
-                    }
-                    catch (Exception err)
-                    {
-                        Log("Normal speech TTS Error: " + err.Message);
-                    }
-
+                    //ttsRedeem(e);
+                    ttsRedeem(e, SpeechSynthesis.SPEECHSYNTH_RATE);
                     break;
             }
         }
 
+        private void ttsRedeem(OnChannelPointsRewardRedeemedArgs e, int speechRate)
+        {
+
+            if (obs.IsConnected)
+            {
+                ttsSceneName = obs.GetCurrentProgramScene();
+
+                List<SceneItemDetails> test = obs.GetSceneItemList(ttsSceneName);
+
+                //SceneItemDetails sceneItem = test.FirstOrDefault(sceneItem => sceneItem.SourceName == "TwitchChatFace");
+                ttsSceneItem = test.FirstOrDefault(sceneItem => sceneItem.SourceName == "TwitchChatFace");
+
+                if (ttsSceneName != null)
+                {
+                    //Log("TwitchChatFace Found");
+
+                    obs.SetSceneItemEnabled(ttsSceneName, ttsSceneItem.ItemId, true);
+
+                    SpeechSynthObj.SpeechSynthAsync(e.RewardRedeemed.Redemption.UserInput, speechRate);
+
+                    CloseTTSFace();
+                }
+                else
+                {
+                    Log("TwitchChatFace not found in current OBS scene");
+
+                    SpeechSynthObj.SpeechSynthAsync(e.RewardRedeemed.Redemption.UserInput, speechRate);
+                }
+            }
+            else
+            {
+                //trigger TTS without calling obs-related methods
+                if (speechRate == -100)
+                    SpeechSynthObj.SpeechSynthAsync(e.RewardRedeemed.Redemption.UserInput);
+                else
+                    SpeechSynthObj.SpeechSynthAsync(e.RewardRedeemed.Redemption.UserInput, speechRate);
+            }
+
+
+        }
+
+        //trigger commercial messages in new thread due to sleeping thread
         private void PubSub_OnCommercial(object sender, OnCommercialArgs e)
         {
             //do actual OnCommercial handling on new thread (method will sleep the thread)
@@ -384,6 +487,7 @@ namespace TwitchBot
             }).Start();
         }
 
+        //Write ad break starting message, wait for however long the current ad break is, and send an ad break ending message
         private void OnCommercial_NewThread(object sender, OnCommercialArgs e)
         {
             int commercialBreakLength = e.Length;
@@ -407,8 +511,10 @@ namespace TwitchBot
                 OwnerOfChannelConnection.SendMessage(TwitchChannelName, "Ad break is now done!");
             }
         }
+        //----------------End of PubSub Event Hookups----------------
 
-        //TwitchClient Event Hookups
+
+        //----------------TwitchClient Event Hookups----------------
         private void Client_OnConnected(object sender, OnConnectedArgs e)
         {
             Log($"User {e.BotUsername} connected (bot access)");
@@ -528,8 +634,8 @@ namespace TwitchBot
                 //
                 //------------------------------------------------------------------------------------------------------------------
                 //
-                //Tell user what skyrim spawn commands are avaialble
-                if (commandText.Equals("skyrim"))
+                //Tell user what skyrim spawn commands are avaialble (only when Twitch Plays is active)
+                if (commandText.Equals("skyrim") && twitchPlaysEnable)
                 {
                     string skyrimCommands = "You can mess with skyrim by saying any of the following: forward, back, stop, left, right, jump, " +
                         "cheese, soup, wine, potions, rabbits, skeevers, bears, lydia, spiders, dragons, cheesemageddon, and soupmageddon";
@@ -547,8 +653,6 @@ namespace TwitchBot
         //https://www.dougdoug.com/twitchplays-template-py-3-9-x  example threadpool-enabled bot (albeit in python)
         private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
         {
-            //twitchChatMoveOBSImage(e.ChatMessage.Message);
-
             if (twitchPlaysEnable)
             {
                 Log($"OnMessageReceived: {e.ChatMessage.Username.ToLower()} - {e.ChatMessage.Message.ToLower()}");
@@ -559,6 +663,10 @@ namespace TwitchBot
                 //Twitch plays Skyrim SE
                 TwitchPlaysObj.TwitchPlaysSkyrim(e);
 
+                //------------------<IMPLEMENT>------------------------------
+                //Twitch plays Trackmania
+
+                //------------------</IMPLEMENT>-----------------------------
 
 
                 //simple testing to hear how things sound through the speechsynth
@@ -569,34 +677,7 @@ namespace TwitchBot
 
             }
         }
-
-
-        /*
-        void twitchChatMoveOBSImage(string message)
-        {
-            try
-            {
-                //string currSceneName = obs.GetCurrentProgramScene();
-                //int twitchChatFaceItemID = obs.GetSceneItemId(currSceneName, "TwitchChatFace", 0);
-                //bool twitchChatFaceEnabled = obs.GetSceneItemEnabled(currSceneName, twitchChatFaceItemID);
-
-                //Log("1: " + e.RewardRedeemed.Redemption.Status);
-
-                //obs.SetSceneItemEnabled(currSceneName, twitchChatFaceItemID, true);
-
-                TwitchPlays.SpeechSynth(message);
-
-                //obs.SetSceneItemEnabled(currSceneName, twitchChatFaceItemID, false);
-
-            }
-            catch (Exception except)
-            {
-                Log("Twitch Chat Speaking Error: " + except.Message);
-
-                //Log(e.RewardRedeemed.Redemption.Status);
-            }
-        }
-        */
+        //----------------End of TwitchClient Event Hookups----------------
 
         //Sends log messages to both the user form and console
         public void Log(string printMessage)
@@ -754,8 +835,31 @@ namespace TwitchBot
             }
         }
 
+        public void CloseTTSFace()
+        {
+            try
+            {
+                //ensure TTS is running before starting to check states
+                Thread.Sleep(100);
 
-        private void MainWindow_Closing(object sender, EventArgs e)
+                //check every 100ms if TTS is actively speaking. if finished speaking, disable TTS face
+                while (SpeechSynthObj.asyncSynth.State.ToString() == "Speaking")
+                {
+                    Thread.Sleep(100);
+                }
+
+                if (obs.IsConnected && ttsSceneItem != null)
+                {
+                    obs.SetSceneItemEnabled(ttsSceneName, ttsSceneItem.ItemId, false);
+                }
+            }
+            catch (Exception e)
+            {
+                Log("CloseTTSFace Error: " + e.Message);
+            }
+        }
+
+        protected void MainWindow_Closing(object sender, EventArgs e)
         {
             //could probably just call Application.Exit()
             if (OwnerOfChannelConnection != null)
@@ -783,6 +887,11 @@ namespace TwitchBot
             {
                 obs.Disconnect();
             }
+        }
+
+        private async void yetToBeFilledButton_Click(object sender, RoutedEventArgs e)
+        {
+            await InitializeSpotifyAPI();
         }
     }
 }

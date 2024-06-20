@@ -5,6 +5,8 @@ using System.Linq;
 using System.Speech.Synthesis;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Forms;
 
 namespace TwitchBot
 {
@@ -32,14 +34,15 @@ namespace TwitchBot
     class SpeechSynthesis
     {
         static readonly int SPEECHSYNTH_VOL = 80;
-        static readonly int SPEECHSYNTH_RATE = 0;
-
-        SpeechSynthesizer synth = new SpeechSynthesizer();
+        public static readonly int SPEECHSYNTH_RATE = 0;
+        public SpeechSynthesizer synth = new SpeechSynthesizer();
+        public SpeechSynthesizer asyncSynth = new SpeechSynthesizer();
 
         //use for general TTS needs
+        //default value for customRate set to -100 to signify obvious impossible rate value
         public void SpeechSynth(string input, int customRate = -100)
         {
-            Trace.WriteLine("SpeechSynth received: " + input);
+            //Trace.WriteLine("SpeechSynth received: " + input);
 
             /*
             foreach (var v in synth.GetInstalledVoices().Select(v => v.VoiceInfo))
@@ -60,27 +63,19 @@ namespace TwitchBot
             synth.Speak(prompt);
         }
 
-
         public void SpeechSynthAsync(string input, int customRate = -100)
         {
-            Trace.WriteLine("SpeechSynth received: " + input);
+            //Trace.WriteLine("SpeechSynth received: " + input);
 
-            synth.SpeakCompleted += synth_SpeakComplete;
-
-            synth.Volume = SPEECHSYNTH_VOL;
+            asyncSynth.Volume = SPEECHSYNTH_VOL;
             if (customRate == -100)
-                synth.Rate = SPEECHSYNTH_RATE;
+                asyncSynth.Rate = SPEECHSYNTH_RATE;
             else
-                synth.Rate = customRate;
+                asyncSynth.Rate = customRate;
 
             Prompt prompt = new Prompt(input);
 
-            synth.SpeakAsync(prompt);
-        }
-
-        void synth_SpeakComplete(object sender, System.Speech.Synthesis.SpeakCompletedEventArgs e)
-        {
-            //MainWindow.DisableObsTtsFace();
+            asyncSynth.SpeakAsync(prompt);
         }
     }
 }

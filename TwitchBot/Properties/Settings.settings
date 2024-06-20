@@ -14,5 +14,11 @@
     <Setting Name="OBSWebSocketAuth" Type="System.String" Scope="User">
       <Value Profile="(Default)">B8HxqfVm10b9oc6a</Value>
     </Setting>
+    <Setting Name="SpotifyClientId" Type="System.String" Scope="User">
+      <Value Profile="(Default)">fb9e634a97ce4f37a9cbdcf4c10f6765</Value>
+    </Setting>
+    <Setting Name="SpotifyClientSecret" Type="System.String" Scope="User">
+      <Value Profile="(Default)">cf94d6d575294654825ec6f17944976b</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

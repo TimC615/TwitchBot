@@ -70,5 +70,29 @@ namespace TwitchBot.Properties {
                 this["OBSWebSocketAuth"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("fb9e634a97ce4f37a9cbdcf4c10f6765")]
+        public string SpotifyClientId {
+            get {
+                return ((string)(this["SpotifyClientId"]));
+            }
+            set {
+                this["SpotifyClientId"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("cf94d6d575294654825ec6f17944976b")]
+        public string SpotifyClientSecret {
+            get {
+                return ((string)(this["SpotifyClientSecret"]));
+            }
+            set {
+                this["SpotifyClientSecret"] = value;
+            }
+        }
     }
 }
