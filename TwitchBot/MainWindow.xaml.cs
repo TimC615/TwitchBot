@@ -19,9 +19,7 @@ using TwitchLib.Communication.Interfaces;
 using System;
 using SpotifyAPI.Web;
 using SpotifyAPI.Web.Auth;
-using Swan.Parsers;
 using OBSWebsocketDotNet.Types;
-using System.Linq;
 
 
 //Base functionality taken from HonestDanGames' Youtube channel https://youtu.be/Ufgq6_QhVKw?si=QYBbDl0sYVCy3QVF
@@ -44,6 +42,8 @@ using System.Linq;
 //maybe put in timed messages (eg: after 30 min shout out socials and following)
 
 //maybe put in automatic discord messaging? (eg: hey i'm live messages)
+
+//TTS REDEEM: look into role filtering for custom talking head images
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
 {
@@ -57,7 +57,7 @@ namespace TwitchBot
         private readonly List<string> Scopes = new List<string>
         { "user:edit", "chat:read", "chat:edit", "channel:moderate", "whispers:read", "bits:read",
             "channel:read:subscriptions", "user:read:email", "user:read:subscriptions", "channel:manage:redemptions",
-            "channel:edit:commercial", "channel:manage:ads" };
+            "channel:edit:commercial", "channel:manage:ads", "user:read:email" };
         //find more Twitch API scopes at https://dev.twitch.tv/docs/authentication/scopes/
 
         //, "channel:edit:commercial" //using with WitchLib.PubSub (points redeems) and users triggering ad breaks
@@ -74,6 +74,7 @@ namespace TwitchBot
         protected OBSWebsocket obs;
         private string ttsSceneName;
         private SceneItemDetails ttsSceneItem;
+        private string TTSTalkingHeadName = "TTS Talking Head";
 
         //Spotify API
         //private static HttpClient spotifyAPIConnection { get; set; }
@@ -251,7 +252,7 @@ namespace TwitchBot
 
 
 
-        /*
+        /* Spotify API v1
         void InitializeSpotifyAPI()
         {
             var loginRequest = new LoginRequest(
@@ -444,16 +445,31 @@ namespace TwitchBot
             {
                 ttsSceneName = obs.GetCurrentProgramScene();
 
-                List<SceneItemDetails> test = obs.GetSceneItemList(ttsSceneName);
+                List<SceneItemDetails> sceneItemList = obs.GetSceneItemList(ttsSceneName);
 
-                //SceneItemDetails sceneItem = test.FirstOrDefault(sceneItem => sceneItem.SourceName == "TwitchChatFace");
-                ttsSceneItem = test.FirstOrDefault(sceneItem => sceneItem.SourceName == "TwitchChatFace");
+                ttsSceneItem = sceneItemList.FirstOrDefault(sceneItem => sceneItem.SourceName == TTSTalkingHeadName);
 
                 if (ttsSceneName != null)
                 {
-                    //Log("TwitchChatFace Found");
+                    //Log("TTS Talking Head Source Found");
+
+                    //get id and login of user, send request to Twitch API to get profile image url, and set obs browser source to url
+                    List<string> idSearch = new List<string>();
+                    idSearch.Add(e.RewardRedeemed.Redemption.User.Id);
+                    List<string> userSearch = new List<string>();
+                    userSearch.Add(e.RewardRedeemed.Redemption.User.Login);
+
+                    var users = TheTwitchAPI.Helix.Users.GetUsersAsync(idSearch, userSearch);
+                    string profileImageUrl = users.Result.Users[0].ProfileImageUrl;
+
+                    InputSettings testInSet = obs.GetInputSettings("TTS Talking Head");
+
+                    testInSet.Settings["url"] = profileImageUrl;
+
+                    obs.SetInputSettings(testInSet);
 
                     obs.SetSceneItemEnabled(ttsSceneName, ttsSceneItem.ItemId, true);
+
 
                     SpeechSynthObj.SpeechSynthAsync(e.RewardRedeemed.Redemption.UserInput, speechRate);
 
@@ -461,7 +477,7 @@ namespace TwitchBot
                 }
                 else
                 {
-                    Log("TwitchChatFace not found in current OBS scene");
+                    Log("TTS Talking Head Source not found in current OBS scene");
 
                     SpeechSynthObj.SpeechSynthAsync(e.RewardRedeemed.Redemption.UserInput, speechRate);
                 }
