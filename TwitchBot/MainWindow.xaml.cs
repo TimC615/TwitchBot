@@ -20,6 +20,8 @@ using System;
 using SpotifyAPI.Web;
 using SpotifyAPI.Web.Auth;
 using OBSWebsocketDotNet.Types;
+using TwitchLib.Client.Extensions;
+using TwitchLib.Api.Helix.Models.Moderation.BanUser;
 
 
 //Base functionality taken from HonestDanGames' Youtube channel https://youtu.be/Ufgq6_QhVKw?si=QYBbDl0sYVCy3QVF
@@ -43,7 +45,20 @@ using OBSWebsocketDotNet.Types;
 
 //maybe put in automatic discord messaging? (eg: hey i'm live messages)
 
+
+
+
+
 //TTS REDEEM: look into role filtering for custom talking head images
+
+//TTS Redeem: Spam filter or skip current message button (gui button and bound to keyboard? [scroll lock])
+//Restart bot button?
+
+//look into command/points redeem to have a chance at timing out someone
+//poitially time out sender if spamming too much
+//NOT for timing someone else out, it's to time yourself out as a joke
+//winning = NOT timed out
+
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
 {
@@ -55,9 +70,10 @@ namespace TwitchBot
         private readonly string ClientId = Properties.Settings.Default.clientid;
         private readonly string ClientSecret = Properties.Settings.Default.clientsecret;
         private readonly List<string> Scopes = new List<string>
-        { "user:edit", "chat:read", "chat:edit", "channel:moderate", "whispers:read", "bits:read",
+        { "user:edit", "chat:read", "chat:edit", "channel:moderate", "bits:read",
             "channel:read:subscriptions", "user:read:email", "user:read:subscriptions", "channel:manage:redemptions",
-            "channel:edit:commercial", "channel:manage:ads", "user:read:email" };
+            "channel:edit:commercial", "channel:manage:ads", "user:read:email", "moderator:manage:banned_users"
+        };
         //find more Twitch API scopes at https://dev.twitch.tv/docs/authentication/scopes/
 
         //, "channel:edit:commercial" //using with WitchLib.PubSub (points redeems) and users triggering ad breaks
@@ -66,6 +82,7 @@ namespace TwitchBot
         private TwitchClient OwnerOfChannelConnection;
         private TwitchAPI TheTwitchAPI;
         private TwitchPubSub PubSub;
+        private static int TIMEOUTROULETTELENGTH = 30;      //timeout length, in seconds
 
         //API Ninja
         private static HttpClient ninjaAPIConnection { get; set; }
@@ -100,7 +117,7 @@ namespace TwitchBot
         //Bot Commands
         readonly Dictionary<string, string> CommandsStaticResponses = new Dictionary<string, string>
         {
-            { "commands", "The current commands are: help, about, discord, twitter, lurk, roll, fact, and roll" },
+            { "commands", "The current chat commands are: help, about, discord, twitter, lurk, roll, fact, roll, and roulette" },
             { "about", "Hello! I'm TheCakeIsAPie__ and I'm a Canadian variety streamer. We play a bunch of stuff over here in this small corner of the internet. Come pop a seat and have fun watching the shenanigans!"},
             { "discord", "Join the discord server at: https://discord.gg/uzHqnxKKkC"},
             { "twitter", "Follow me on Twitter at: https://twitter.com/TheCakeIsAPi"},
@@ -182,7 +199,7 @@ namespace TwitchBot
             TheTwitchAPI = new TwitchAPI();
             TheTwitchAPI.Settings.ClientId = ClientId;
             TheTwitchAPI.Settings.AccessToken = accessToken;
-            //TheTwitchAPI.Settings.Secret = ClientSecret;
+            TheTwitchAPI.Settings.Secret = ClientSecret;
         }
 
         void InitializeOwnerOfChannelConnection(string username, string accessToken)
@@ -196,6 +213,9 @@ namespace TwitchBot
             //OwnerOfChannelConnection.OnLog += OwnerOfChannelConnection_OnLog; //good for debug
             OwnerOfChannelConnection.OnChatCommandReceived += Bot_OnChatCommandReceived;
             OwnerOfChannelConnection.OnMessageReceived += Client_OnMessageReceived;
+
+            //OwnerOfChannelConnection.OnBanned += Client_OnBanned;
+            //OwnerOfChannelConnection.OnUserTimedout += Client_OnUserTimedout;
 
             //Other subscription examples
             //OwnerOfChannelConnection.OnJoinedChannel += Client_OnJoinedChannel;
@@ -589,14 +609,14 @@ namespace TwitchBot
                                 case "fact":
                                 case "joke":
                                     OwnerOfChannelConnection.SendMessage(TwitchChannelName, "Enter \"!" + helpSpecifier + "\" and I'll do all the rest");
-
-                                    //sending whispers doesn't seem to work atm
-                                    //OwnerOfChannelConnection.SendWhisper(e.Command.ChatMessage.UserId, "Enter \"!" + helpSpecifier + "\" and I'll do all the rest");
-                                    //OwnerOfChannelConnection.SendWhisper(e.Command.ChatMessage.Username, "Enter \"!" + helpSpecifier + "\" and I'll do all the rest");
                                     break;
                                 case "roll":
                                     OwnerOfChannelConnection.SendMessage(TwitchChannelName,
                                         "Enter \"!roll d<number of sides>\" and just put in however many sides you want (e.g. !roll d6)");
+                                    break;
+                                case "roulette":
+                                    OwnerOfChannelConnection.SendMessage(TwitchChannelName,
+                                        "Enter \"!roulette\" for a chance to time yourself out for " + TIMEOUTROULETTELENGTH + " seconds");
                                     break;
                                 default:
                                     break;
@@ -650,6 +670,44 @@ namespace TwitchBot
                 //
                 //------------------------------------------------------------------------------------------------------------------
                 //
+                //Random chance for user to time themself out. If user has roles, automatically re-apply once timeout is done
+                if (commandText.Equals("roulette"))
+                {
+                    Log("Roulette triggered");
+                    Random random = new Random();
+
+                    //1 in 10 chance
+                    if(random.Next(1, 11) == 1)
+                    {
+                        try
+                        {
+                            string timeoutRouletteMessage = $"Congrats {e.Command.ChatMessage.Username}! You won the roulette and timed yourself out!";
+                            OwnerOfChannelConnection.SendMessage(TwitchChannelName, timeoutRouletteMessage);
+
+                            //ban info for current user
+                            BanUserRequest request = new BanUserRequest();
+                            request.UserId = e.Command.ChatMessage.UserId;
+                            request.Reason = "Congrats! You won the timeout roulette!";
+                            request.Duration = TIMEOUTROULETTELENGTH;
+
+                            //add specific channel and acting moderator info to current user ban info
+                            BanUserResponse result = TheTwitchAPI.Helix.Moderation.BanUserAsync(
+                                TwitchChannelId,
+                                TwitchChannelId,
+                                request
+                                ).Result;
+
+                            Log("Roulette result: " + result.Data);
+                        }
+                        catch (Exception except)
+                        {
+                            Log("Roulette Exception: " + except.Message);
+                        }
+                    }
+                }
+                //
+                //------------------------------------------------------------------------------------------------------------------
+                //
                 //Tell user what skyrim spawn commands are avaialble (only when Twitch Plays is active)
                 if (commandText.Equals("skyrim") && twitchPlaysEnable)
                 {
@@ -693,7 +751,49 @@ namespace TwitchBot
 
             }
         }
+
+        private void Client_OnBanned(object sender, OnBannedArgs e)
+        {
+            Log("OnBanned: " + e.Message);
+        }
+
+        private void Client_OnUserTimedout(object sender, OnUserTimedoutArgs e)
+        {
+            Log("OnUserTimedOut: " + e.UserTimeout.Username + " timed out for " + e.UserTimeout.TimeoutDuration + " seconds");
+        }
         //----------------End of TwitchClient Event Hookups----------------
+
+        private void TwitchPlaysCoundown()
+        {
+            Log($"Enabling Twitch Plays in 5 seconds...");
+
+            //invoke the UI thread, allowing UI changes from a different thread
+            this.Dispatcher.Invoke(() => {
+                twitchPlaysButton.Content = "Starting...";
+                twitchPlaysButton.Opacity = 0.75;
+                twitchPlaysButton.IsEnabled = false;
+            });
+
+            Thread.Sleep(5000);
+
+            twitchPlaysEnable = true;
+            TwitchPlaysObj = new TwitchPlays();
+
+            Log($"Twitch Plays now live");
+
+            //invoke the UI thread, allowing UI changes from a different thread
+            this.Dispatcher.Invoke(() => {
+                twitchPlaysButton.Content = "Disable Twitch Plays";
+                twitchPlaysButton.Opacity = 1;
+                twitchPlaysButton.IsEnabled = true;
+            });
+
+
+            System.Media.SoundPlayer twitchPlaysStartup = new System.Media.SoundPlayer("C:\\Users\\timot\\source\\repos\\TwitchBot\\Twitch Plays startup sound.wav");
+            twitchPlaysStartup.Play();
+
+            SpeechSynthObj.SpeechSynth("Twitch Plays is now live");
+        }
 
         //Sends log messages to both the user form and console
         public void Log(string printMessage)
@@ -763,38 +863,6 @@ namespace TwitchBot
         private void ConnectToOBS_Click(object sender, RoutedEventArgs e)
         {
 
-        }
-
-        private void TwitchPlaysCoundown()
-        {
-            Log($"Enabling Twitch Plays in 5 seconds...");
-
-            //invoke the UI thread, allowing UI changes from a different thread
-            this.Dispatcher.Invoke(() => {
-                twitchPlaysButton.Content = "Starting...";
-                twitchPlaysButton.Opacity = 0.75;
-                twitchPlaysButton.IsEnabled = false;
-            });
-
-            Thread.Sleep(5000);
-
-            twitchPlaysEnable = true;
-            TwitchPlaysObj = new TwitchPlays();
-
-            Log($"Twitch Plays now live");
-
-            //invoke the UI thread, allowing UI changes from a different thread
-            this.Dispatcher.Invoke(() => {
-                twitchPlaysButton.Content = "Disable Twitch Plays";
-                twitchPlaysButton.Opacity = 1;
-                twitchPlaysButton.IsEnabled = true;
-            });
-
-
-            System.Media.SoundPlayer twitchPlaysStartup = new System.Media.SoundPlayer("C:\\Users\\timot\\source\\repos\\TwitchBot\\Twitch Plays startup sound.wav");
-            twitchPlaysStartup.Play();
-
-            SpeechSynthObj.SpeechSynth("Twitch Plays is now live");
         }
 
         async private void APINinjaGetFact()
