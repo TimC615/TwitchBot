@@ -22,6 +22,7 @@ using SpotifyAPI.Web.Auth;
 using OBSWebsocketDotNet.Types;
 using TwitchLib.Client.Extensions;
 using TwitchLib.Api.Helix.Models.Moderation.BanUser;
+using System.Net.Sockets;
 
 
 //Base functionality taken from HonestDanGames' Youtube channel https://youtu.be/Ufgq6_QhVKw?si=QYBbDl0sYVCy3QVF
@@ -54,11 +55,8 @@ using TwitchLib.Api.Helix.Models.Moderation.BanUser;
 //TTS Redeem: Spam filter or skip current message button (gui button and bound to keyboard? [scroll lock])
 //Restart bot button?
 
-//look into command/points redeem to have a chance at timing out someone
-//poitially time out sender if spamming too much
-//NOT for timing someone else out, it's to time yourself out as a joke
-//winning = NOT timed out
 
+//timeputroulette: re-add mod role. currently timeout diesnt reinstate it
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
 {
@@ -66,7 +64,7 @@ namespace TwitchBot
     {
         //Authentication
         private HttpServer WebServer;
-        private readonly string RedirectUrl = "http://localhost";
+        private readonly string RedirectUri = "http://localhost:3000";
         private readonly string ClientId = Properties.Settings.Default.clientid;
         private readonly string ClientSecret = Properties.Settings.Default.clientsecret;
         private readonly List<string> Scopes = new List<string>
@@ -142,9 +140,9 @@ namespace TwitchBot
         {
             initializeWebServer();
 
-            //var authUrl = $"https://id.twitch.tv/oauth2/authorize?response_type=code&client_id={{ClientId}}&redirect_uri={{RedirectUrl}}&scope={{String.Join("+", Scopes)}}";
+            //var authUrl = $"https://id.twitch.tv/oauth2/authorize?response_type=code&client_id={{ClientId}}&redirect_uri={{RedirectUri}}&scope={{String.Join("+", Scopes)}}";
             var authUrl = "https://id.twitch.tv/oauth2/authorize?response_type=code&client_id=" +
-                ClientId + "&redirect_uri=" + RedirectUrl + "&scope=" + String.Join("+", Scopes);
+                ClientId + "&redirect_uri=" + RedirectUri + "&scope=" + String.Join("+", Scopes);
 
             Trace.WriteLine(authUrl);
 
@@ -195,15 +193,24 @@ namespace TwitchBot
         //
         //----------------------Initialization Methods----------------------
         //
+
         void initializeWebServer()
         {
             //Create local web server (allows for requesting OAUTH token)
             WebServer = new HttpServer();
-            WebServer.EndPoint = new IPEndPoint(IPAddress.Loopback, 80);
+
+            //int port = GetFreePort();
+            //WebServer.EndPoint = new IPEndPoint(IPAddress.Loopback, port);
+
+            WebServer.EndPoint = new IPEndPoint(IPAddress.Loopback, 3000);
+            //WebServer.EndPoint = new IPEndPoint(IPAddress.Loopback, 0);
+            //WebServer.EndPoint = new IPEndPoint(IPAddress.Loopback, 443);
+
+
+            //WebServer.EndPoint = new IPEndPoint(IPAddress.Loopback, 80);
             //WebServer.EndPoint = new IPEndPoint(IPAddress.Loopback, 8080);
             //WebServer.EndPoint = new IPEndPoint(IPAddress.Loopback, 49152);
 
-            //
             WebServer.RequestReceived += async (s, e) =>
             {
                 using (var writer = new StreamWriter(e.Response.OutputStream))
@@ -259,7 +266,7 @@ namespace TwitchBot
                 { "client_secret", ClientSecret },
                 { "code", code },
                 { "grant_type", "authorization_code" },
-                { "redirect_uri", RedirectUrl }
+                { "redirect_uri", RedirectUri }
             };
 
             var content = new FormUrlEncodedContent(values);
@@ -828,7 +835,7 @@ namespace TwitchBot
 
                 ttsSceneItem = sceneItemList.FirstOrDefault(sceneItem => sceneItem.SourceName == TTSTalkingHeadName);
 
-                if (ttsSceneName != null)
+                if (ttsSceneName != null && ttsSceneItem != null)
                 {
                     //Log("TTS Talking Head Source Found");
 
@@ -977,6 +984,20 @@ namespace TwitchBot
             {
                 Log("CloseTTSFace Error: " + e.Message);
             }
+        }
+
+
+        int GetFreePort()
+        {
+            //code snippet retreived from: https://stackoverflow.com/questions/138043/find-the-next-tcp-port-in-net written by user: TheSeeker
+            TcpListener tcpListener = new TcpListener(IPAddress.Loopback, 0);
+            tcpListener.Start();
+
+            int port = ((IPEndPoint)tcpListener.LocalEndpoint).Port;
+
+            tcpListener.Stop();
+
+            return port;
         }
 
 
