@@ -11,7 +11,7 @@
         <TextBox Name="ConsoleLog" HorizontalAlignment="Center" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="533" Height="301" x:FieldModifier="public" Margin="0,54,0,0" IsReadOnly="True" VerticalScrollBarVisibility="Auto"/>
         <Button Name="twitchPlaysButton" Content="Start Twtich Plays" HorizontalAlignment="Left" Margin="10,360,0,0" VerticalAlignment="Top" Height="38" Width="144" Click="TwitchPlaysButton_Click"/>
         <Button x:Name="OBSConnectionButton" Content="Connect to OBS" HorizontalAlignment="Left" Margin="159,360,0,0" VerticalAlignment="Top" Height="38" Width="144" Click="ConnectToOBS_Click" IsEnabled="false"/>
-        <Button x:Name="yetToBeFilledButton" Content="Test Spotify API" HorizontalAlignment="Left" Margin="308,360,0,0" VerticalAlignment="Top" Height="38" Width="144" IsEnabled="False" Click="yetToBeFilledButton_Click"/>
+        <Button x:Name="yetToBeFilledButton" Content="Test Refresh" HorizontalAlignment="Left" Margin="308,360,0,0" VerticalAlignment="Top" Height="38" Width="144" IsEnabled="true" Click="yetToBeFilledButton_Click"/>
 
     </Grid>
 </Window>

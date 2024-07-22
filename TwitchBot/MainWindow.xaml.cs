@@ -23,6 +23,8 @@ using OBSWebsocketDotNet.Types;
 using TwitchLib.Client.Extensions;
 using TwitchLib.Api.Helix.Models.Moderation.BanUser;
 using System.Net.Sockets;
+using TwitchLib.Api.Auth;
+using TwitchLib.Api.Core.Exceptions;
 
 
 //Base functionality taken from HonestDanGames' Youtube channel https://youtu.be/Ufgq6_QhVKw?si=QYBbDl0sYVCy3QVF
@@ -57,6 +59,18 @@ using System.Net.Sockets;
 
 
 //timeputroulette: re-add mod role. currently timeout diesnt reinstate it
+
+
+//elden ring death counter. maybe automatic? (tie into elden ting itself instead of relying on chat commands)
+//maybe save death counter between app instances by reading from file
+
+
+//look into making an app for buzz to track deaths (make it run off of key presses)
+
+
+
+//issue with ttsredeem where it yells about invalid access token (might be an issue with refreshing new tokens after running code for a while?)
+//might need to put in a system to just ping twitch api every so often
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
 {
@@ -104,6 +118,7 @@ namespace TwitchBot
 
         //Cached Variables
         private string CachedOwnerOfChannelAccessToken = "needsaccesstoken"; //cached due to potentially being needed for API requests
+        private string CachedRefreshToken = "needsrefreshtoken"; //needed to ask Twitch API for new access token
         private string TwitchChannelName; //needed for bot to join Twitch channel
         private string TwitchChannelId; //needed for some API requests
 
@@ -178,7 +193,9 @@ namespace TwitchBot
         //NOT CURRENTLY USED
         private async void yetToBeFilledButton_Click(object sender, RoutedEventArgs e)
         {
-            await InitializeSpotifyAPI();
+            //await InitializeSpotifyAPI();
+
+            RefreshAuthToken();
         }
 
         //NOT CURRENTLY USED
@@ -202,14 +219,8 @@ namespace TwitchBot
             //int port = GetFreePort();
             //WebServer.EndPoint = new IPEndPoint(IPAddress.Loopback, port);
 
-            WebServer.EndPoint = new IPEndPoint(IPAddress.Loopback, 3000);
-            //WebServer.EndPoint = new IPEndPoint(IPAddress.Loopback, 0);
-            //WebServer.EndPoint = new IPEndPoint(IPAddress.Loopback, 443);
-
-
-            //WebServer.EndPoint = new IPEndPoint(IPAddress.Loopback, 80);
-            //WebServer.EndPoint = new IPEndPoint(IPAddress.Loopback, 8080);
-            //WebServer.EndPoint = new IPEndPoint(IPAddress.Loopback, 49152);
+            WebServer.EndPoint = new IPEndPoint(IPAddress.Loopback, 3000);  //must specify on twitch dev console to use "http://localhost:3000"
+            //WebServer.EndPoint = new IPEndPoint(IPAddress.Loopback, 80);  //defaults to this if no port specified in twitch dev console
 
             WebServer.RequestReceived += async (s, e) =>
             {
@@ -220,7 +231,9 @@ namespace TwitchBot
                         //initialize base TwitchLib API
                         var code = e.Request.QueryString["code"];
                         var ownerOfChannelAccessAndRefresh = await getAccessAndRefreshTokens(code);
-                        CachedOwnerOfChannelAccessToken = ownerOfChannelAccessAndRefresh.Item1;
+
+                        CachedOwnerOfChannelAccessToken = ownerOfChannelAccessAndRefresh.Item1; //access token
+                        CachedRefreshToken = ownerOfChannelAccessAndRefresh.Item2; //refresh token
 
                         SetNameAndIdByOauthedUser(CachedOwnerOfChannelAccessToken).Wait();
                         InitializeOwnerOfChannelConnection(TwitchChannelName, CachedOwnerOfChannelAccessToken);
@@ -274,6 +287,7 @@ namespace TwitchBot
             var response = await client.PostAsync("https://id.twitch.tv/oauth2/token", content);
 
             var responseString = await response.Content.ReadAsStringAsync();
+
             var json = JObject.Parse(responseString);
 
             return new Tuple<string, string>(json["access_token"].ToString(), json["refresh_token"].ToString());
@@ -387,6 +401,8 @@ namespace TwitchBot
             //responses are added to dictionary in lowercase
             if (CommandsStaticResponses.ContainsKey(commandText))
             {
+                CheckAccessToken();
+
                 OwnerOfChannelConnection.SendMessage(TwitchChannelName, CommandsStaticResponses[commandText]);
             }
             //
@@ -399,6 +415,8 @@ namespace TwitchBot
                 //Tells user how to use commands
                 if (commandText.Equals("help"))
                 {
+                    CheckAccessToken();
+
                     List<string> test = e.Command.ArgumentsAsList;
 
                     if (e.Command.ArgumentsAsList.Count == 0)
@@ -443,6 +461,8 @@ namespace TwitchBot
                 //roll a random dX sided die
                 if (commandText.Contains("roll", StringComparison.OrdinalIgnoreCase) && e.Command.ArgumentsAsList.Count >= 1)
                 {
+                    CheckAccessToken();
+
                     try
                     {
                         List<string> rollCommand = e.Command.ArgumentsAsList;
@@ -466,6 +486,8 @@ namespace TwitchBot
                 //Grab random fact from https://api-ninjas.com/
                 if (commandText.Equals("fact"))
                 {
+                    CheckAccessToken();
+
                     new Thread(APINinjaGetFact).Start();
                 }
                 //
@@ -474,6 +496,8 @@ namespace TwitchBot
                 //Grab random dad joke from https://api-ninjas.com/
                 if (commandText.Equals("joke"))
                 {
+                    CheckAccessToken();
+
                     new Thread(APINinjaGetDadJoke).Start();
                 }
                 //
@@ -493,6 +517,8 @@ namespace TwitchBot
                         //1 in 10 chance 
                         if (random.Next(1, 11) == 1)
                         {
+                            CheckAccessToken();
+
                             string timeoutRouletteMessage = $"Congrats {e.Command.ChatMessage.Username}! You won the roulette and timed yourself out!";
                             OwnerOfChannelConnection.SendMessage(TwitchChannelName, timeoutRouletteMessage);
 
@@ -646,7 +672,6 @@ namespace TwitchBot
                     }
                     break;
 
-                //tts doesn't work if TwitchFace isn't in scene
                 case "tts (random speech rate)":
                     Random random = new Random();
                     int randRate = random.Next(1, 21) - 10;
@@ -699,7 +724,7 @@ namespace TwitchBot
             }
         }
         //
-        //----------------------End of PubSub Event Hookups----------------------
+        //----------------------End of OBS Event Hookups----------------------
         //
 
         //
@@ -837,29 +862,40 @@ namespace TwitchBot
 
                 if (ttsSceneName != null && ttsSceneItem != null)
                 {
-                    //Log("TTS Talking Head Source Found");
+                    try
+                    {
+                        CheckAccessToken();
 
-                    //get id and login of user, send request to Twitch API to get profile image url, and set obs browser source to url
-                    List<string> idSearch = new List<string>();
-                    idSearch.Add(e.RewardRedeemed.Redemption.User.Id);
-                    List<string> userSearch = new List<string>();
-                    userSearch.Add(e.RewardRedeemed.Redemption.User.Login);
+                        //Log("TTS Talking Head Source Found");
 
-                    var users = TheTwitchAPI.Helix.Users.GetUsersAsync(idSearch, userSearch);
-                    string profileImageUrl = users.Result.Users[0].ProfileImageUrl;
+                        //get id and login of user, send request to Twitch API to get profile image url, and set obs browser source to url
+                        List<string> idSearch = new List<string>();
+                        idSearch.Add(e.RewardRedeemed.Redemption.User.Id);
+                        List<string> userSearch = new List<string>();
+                        userSearch.Add(e.RewardRedeemed.Redemption.User.Login);
 
-                    InputSettings testInSet = obs.GetInputSettings("TTS Talking Head");
+                        var users = TheTwitchAPI.Helix.Users.GetUsersAsync(idSearch, userSearch);
+                        string profileImageUrl = users.Result.Users[0].ProfileImageUrl;
 
-                    testInSet.Settings["url"] = profileImageUrl;
+                        InputSettings testInSet = obs.GetInputSettings("TTS Talking Head");
 
-                    obs.SetInputSettings(testInSet);
+                        testInSet.Settings["url"] = profileImageUrl;
 
-                    obs.SetSceneItemEnabled(ttsSceneName, ttsSceneItem.ItemId, true);
+                        obs.SetInputSettings(testInSet);
+
+                        obs.SetSceneItemEnabled(ttsSceneName, ttsSceneItem.ItemId, true);
 
 
-                    SpeechSynthObj.SpeechSynthAsync(e.RewardRedeemed.Redemption.UserInput, speechRate);
+                        SpeechSynthObj.SpeechSynthAsync(e.RewardRedeemed.Redemption.UserInput, speechRate);
 
-                    CloseTTSFace();
+                        CloseTTSFace();
+                    }
+                    catch (Exception except)
+                    {
+                        Log($"TtsRedeem Error: {except.Message}");
+
+                        SpeechSynthObj.SpeechSynthAsync(e.RewardRedeemed.Redemption.UserInput, speechRate);
+                    }
                 }
                 else
                 {
@@ -961,6 +997,37 @@ namespace TwitchBot
             }
         }
 
+        //used to simplify previous code
+        private void CheckAccessToken()
+        {
+            if(TheTwitchAPI.Auth.ValidateAccessTokenAsync == null)
+                RefreshAuthToken();
+        }
+
+        //only use this method reactively when methods spit out an Error 401 Unauthorized result
+        //(not recommended to rely upon the expires_in variable twitch gives)
+        private async void RefreshAuthToken()
+        {
+            try
+            {
+                var result = TheTwitchAPI.Auth.RefreshAuthTokenAsync(CachedRefreshToken, ClientSecret); //start the process of refreshing tokens
+                RefreshResponse response = await result;    //retreive the results of token refresh
+
+                Log($"Old Access: {TheTwitchAPI.Settings.AccessToken}\t\tOld Refresh: {CachedRefreshToken}");
+
+                CachedOwnerOfChannelAccessToken = response.AccessToken;
+                TheTwitchAPI.Settings.AccessToken = response.AccessToken;
+
+                CachedRefreshToken = response.RefreshToken;
+
+                Log($"New Access: {TheTwitchAPI.Settings.AccessToken}\t\tNew Refresh: {CachedRefreshToken}");
+            }
+            catch (Exception except)
+            {
+                Log($"RefreshAuthToken Error: {except.Message}");
+            }
+        }
+
         //Handles the disabling of talking head image in OBS after TTS points redeem events are called
         public void CloseTTSFace()
         {
@@ -985,21 +1052,6 @@ namespace TwitchBot
                 Log("CloseTTSFace Error: " + e.Message);
             }
         }
-
-
-        int GetFreePort()
-        {
-            //code snippet retreived from: https://stackoverflow.com/questions/138043/find-the-next-tcp-port-in-net written by user: TheSeeker
-            TcpListener tcpListener = new TcpListener(IPAddress.Loopback, 0);
-            tcpListener.Start();
-
-            int port = ((IPEndPoint)tcpListener.LocalEndpoint).Port;
-
-            tcpListener.Stop();
-
-            return port;
-        }
-
 
         //Ensures connections to APIs and local web server is closed when exiting application
         protected void MainWindow_Closing(object sender, EventArgs e)
