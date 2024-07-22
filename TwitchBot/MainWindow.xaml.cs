@@ -924,21 +924,22 @@ namespace TwitchBot
 
             Log("PubSub_OnCommercial: Ads started at " + e.ServerTime + " for " + commercialBreakLength + " seconds");
 
+            CheckAccessToken();
+
             if (commercialBreakLength >= 60)
             {
                 double commercialBreakLengthMin = (double)commercialBreakLength / 60;
                 OwnerOfChannelConnection.SendMessage(TwitchChannelName, "Ads have started and will last for " + commercialBreakLengthMin
                     + " minutes. Feel free to stretch a bit, hydrate, or just chill out in chat!");
-                Thread.Sleep(threadSleepLength);
-                OwnerOfChannelConnection.SendMessage(TwitchChannelName, "Ad break is now done!");
             }
             else
             {
                 OwnerOfChannelConnection.SendMessage(TwitchChannelName, "Ads have started and will last for " + commercialBreakLength
                     + " seconds. Feel free to stretch a bit, hydrate, or just chill out in chat!");
-                Thread.Sleep(threadSleepLength);
-                OwnerOfChannelConnection.SendMessage(TwitchChannelName, "Ad break is now done!");
             }
+
+            Thread.Sleep(threadSleepLength);
+            OwnerOfChannelConnection.SendMessage(TwitchChannelName, "Ad break is now done!");
         }
 
         //Ping API Ninja for a fact and output to twitch chat
