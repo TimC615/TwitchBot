@@ -511,13 +511,17 @@ namespace TwitchBot
                         Log("Roulette triggered");
                         Random random = new Random();
 
-                        if (e.Command.ChatMessage.IsMe)
-                            throw new Exception("As broadcaster, tried to timeout self");
+                        if (e.Command.ChatMessage.IsMe || e.Command.ChatMessage.IsBroadcaster || e.Command.ChatMessage.IsStaff)
+                            throw new Exception("User tried to timeout as restricted role");
 
                         //1 in 10 chance 
                         if (random.Next(1, 11) == 1)
                         {
                             CheckAccessToken();
+
+                            bool isMod = false;
+                            if(e.Command.ChatMessage.IsModerator)
+                                isMod = true;
 
                             string timeoutRouletteMessage = $"Congrats {e.Command.ChatMessage.Username}! You won the roulette and timed yourself out!";
                             OwnerOfChannelConnection.SendMessage(TwitchChannelName, timeoutRouletteMessage);
@@ -534,8 +538,15 @@ namespace TwitchBot
                                 TwitchChannelId,
                                 request
                                 ).Result;
-
+                            
                             Log("Roulette result: " + result.Data);
+
+                            if (isMod)
+                            {
+                                new Thread(delegate () {
+                                    ReinstateModRole(e.Command.ChatMessage.UserId, e.Command.ChatMessage.Username, TIMEOUTROULETTELENGTH);
+                                }).Start();
+                            }
                         }
                     }
                     catch (Exception except)
@@ -1026,6 +1037,22 @@ namespace TwitchBot
             catch (Exception except)
             {
                 Log($"RefreshAuthToken Error: {except.Message}");
+            }
+        }
+
+        private void ReinstateModRole(string userIdToMod, string username, int banLength)
+        {
+            Thread.Sleep(banLength * 1000); //wait for user's timeout to finish (seconds)
+
+            try
+            {
+                OwnerOfChannelConnection.Mod(TwitchChannelName, userIdToMod);
+
+                Log($"ReinstateModRole: Reinstated mod role for {username} (userID: {userIdToMod})");
+            }
+            catch (Exception except)
+            {
+                Log($"ReinstateModRole Error: {except.Message}");
             }
         }
 
