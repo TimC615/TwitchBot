@@ -25,6 +25,7 @@ using TwitchLib.Api.Helix.Models.Moderation.BanUser;
 using System.Net.Sockets;
 using TwitchLib.Api.Auth;
 using TwitchLib.Api.Core.Exceptions;
+using System.Reflection;
 
 
 //Base functionality taken from HonestDanGames' Youtube channel https://youtu.be/Ufgq6_QhVKw?si=QYBbDl0sYVCy3QVF
@@ -83,6 +84,9 @@ namespace TwitchBot
 
         //, "channel:edit:commercial" //using with WitchLib.PubSub (points redeems) and users triggering ad breaks
 
+        //WPF
+        Settings settings;
+
         //TwitchLib
         private TwitchClient OwnerOfChannelConnection;
         private TwitchAPI TheTwitchAPI;
@@ -137,6 +141,16 @@ namespace TwitchBot
         public MainWindow()
         {
             InitializeComponent();
+
+            //code snippet taken from https://www.red-gate.com/simple-talk/blogs/wpf-menu-displays-to-the-left-of-the-window/
+            //makes it so file menu items fall on the right hand side (by default windows puts them on the left hand side becasue of right-handed people using tablets)
+            var menuDropAlignmentField = typeof(SystemParameters).GetField("_menuDropAlignment", BindingFlags.NonPublic | BindingFlags.Static);
+            Action setAlignmentValue = () => {
+                if (SystemParameters.MenuDropAlignment && menuDropAlignmentField != null) menuDropAlignmentField.SetValue(null, false);
+            };
+            setAlignmentValue();
+            SystemParameters.StaticPropertyChanged += (sender, e) => { setAlignmentValue(); };
+
         }
 
 
@@ -161,14 +175,20 @@ namespace TwitchBot
                 UseShellExecute = true
             });
 
-            connectToTwitch.Opacity = 0.50;
-            connectToTwitch.IsEnabled = false;
+            ConnectToTwitch.Opacity = 0.50;
+            ConnectToTwitch.IsEnabled = false;
 
             SkipCurrentTTSButton.IsEnabled = true;
             twitchPlaysButton.IsEnabled = true;
 
             //testing button
             yetToBeFilledButton.IsEnabled = true;
+        }
+
+        private void SettingsButton_Click(object sender, RoutedEventArgs e)
+        {
+            settings = new Settings();
+            settings.Show();
         }
 
         //Starts countdown if twitch plays is currently off, else disables it
@@ -179,7 +199,7 @@ namespace TwitchBot
                 twitchPlaysEnable = false;
 
                 Log($"Twitch Plays disabled");
-                twitchPlaysButton.Content = "Enable Twitch Plays";
+                twitchPlaysButton.Header = "Enable Twitch Plays";
             }
             //enable Twitch Plays functionality after a 5 second cooldown
             else
@@ -839,12 +859,14 @@ namespace TwitchBot
         {
             Log($"Enabling Twitch Plays in 5 seconds...");
 
+            
             //invoke the UI thread, allowing UI changes from a different thread
             this.Dispatcher.Invoke(() => {
-                twitchPlaysButton.Content = "Starting...";
+                //twitchPlaysButton.Content = "Starting...";
                 twitchPlaysButton.Opacity = 0.75;
                 twitchPlaysButton.IsEnabled = false;
             });
+            
 
             Thread.Sleep(5000);
 
@@ -855,7 +877,7 @@ namespace TwitchBot
 
             //invoke the UI thread, allowing UI changes from a different thread
             this.Dispatcher.Invoke(() => {
-                twitchPlaysButton.Content = "Disable Twitch Plays";
+                twitchPlaysButton.Header = "Stop Twitch Plays";
                 twitchPlaysButton.Opacity = 1;
                 twitchPlaysButton.IsEnabled = true;
             });
@@ -1118,7 +1140,13 @@ namespace TwitchBot
             {
                 obs.Disconnect();
             }
+
+            if (settings!= null && settings.IsVisible)
+            {
+                settings.Close();
+            }
         }
+
         //
         //----------------------End of Utility Methods----------------------
         //

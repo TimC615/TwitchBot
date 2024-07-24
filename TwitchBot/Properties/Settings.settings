@@ -3,22 +3,25 @@
   <Profiles />
   <Settings>
     <Setting Name="clientid" Type="System.String" Scope="User">
-      <Value Profile="(Default)">b35io4wr1yt2k6n9frnfllkraeymo5</Value>
+      <Value Profile="(Default)" />
     </Setting>
     <Setting Name="clientsecret" Type="System.String" Scope="User">
-      <Value Profile="(Default)">9xxjmh1pbnl0vzvwdsx8seh8ja8huc</Value>
+      <Value Profile="(Default)" />
     </Setting>
     <Setting Name="APINinjaKey" Type="System.String" Scope="User">
-      <Value Profile="(Default)">CH6huP8qYlSvHeOhvB9vcQ==bCNTg08FarvFkV9I</Value>
+      <Value Profile="(Default)" />
     </Setting>
     <Setting Name="OBSWebSocketAuth" Type="System.String" Scope="User">
-      <Value Profile="(Default)">B8HxqfVm10b9oc6a</Value>
+      <Value Profile="(Default)" />
     </Setting>
     <Setting Name="SpotifyClientId" Type="System.String" Scope="User">
-      <Value Profile="(Default)">fb9e634a97ce4f37a9cbdcf4c10f6765</Value>
+      <Value Profile="(Default)" />
     </Setting>
     <Setting Name="SpotifyClientSecret" Type="System.String" Scope="User">
-      <Value Profile="(Default)">cf94d6d575294654825ec6f17944976b</Value>
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="test" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
     </Setting>
   </Settings>
 </SettingsFile>

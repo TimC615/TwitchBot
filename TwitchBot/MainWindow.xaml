@@ -5,13 +5,29 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TwitchBot"
         mc:Ignorable="d"
-        Title="Twitch Bot" Height="466" Width="553" Closing="MainWindow_Closing" ResizeMode="NoResize">
-    <Grid x:Name="Twitch_Bot" Background="#FFE4D3BF" Margin="0,0,0,-6">
-        <Button Name="connectToTwitch" Content="Connect to Twitch" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Height="39" Width="144" Click="connectToTwitch_Click"/>
-        <TextBox Name="ConsoleLog" HorizontalAlignment="Center" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="533" Height="301" x:FieldModifier="public" Margin="0,54,0,0" IsReadOnly="True" VerticalScrollBarVisibility="Auto"/>
-        <Button Name="twitchPlaysButton" Content="Start Twtich Plays" HorizontalAlignment="Left" Margin="10,360,0,0" VerticalAlignment="Top" Height="38" Width="144" IsEnabled="False" Click="TwitchPlaysButton_Click"/>
-        <Button x:Name="SkipCurrentTTSButton" Content="Skip Current TTS" HorizontalAlignment="Left" Margin="159,360,0,0" VerticalAlignment="Top" Height="38" Width="144" Click="SkipCurrentTTS_Click" IsEnabled="false"/>
-        <Button x:Name="yetToBeFilledButton" Content="Test Refresh" HorizontalAlignment="Left" Margin="308,360,0,0" VerticalAlignment="Top" Height="38" Width="144" IsEnabled="False" Click="yetToBeFilledButton_Click"/>
+        Title="Twitch Bot" Height="466" Width="560" Closing="MainWindow_Closing" ResizeMode="NoResize">
+    <Grid x:Name="Twitch_Bot" Background="#FFE4D3BF" Margin="0,0,0,0">
 
+        <StackPanel Orientation="Vertical">
+            <!-- https://stackoverflow.com/questions/9936796/create-a-menu-bar-in-wpf -->
+            <Menu VerticalAlignment="Top" Width="Auto" Height="20">
+                <MenuItem Header="_File">
+                    <MenuItem Name="Settings" Header="_Settings" HorizontalAlignment="Left" Width="140" Click="SettingsButton_Click"/>
+                    <MenuItem x:Name="AppExit" Header="Exit" HorizontalAlignment="Left" Width="140"/>
+                </MenuItem>
+                <MenuItem Header="_Launch">
+                    <MenuItem Name="ConnectToTwitch" Header="_Start Bot" HorizontalAlignment="Left" Width="200" Click="connectToTwitch_Click"/>
+                    <MenuItem Name="twitchPlaysButton" Header="_Start Twitch Plays" HorizontalAlignment="Left" Width="200" IsEnabled="False" Click="TwitchPlaysButton_Click"/>
+                </MenuItem>
+            </Menu>
+
+            <TextBox Name="ConsoleLog" HorizontalAlignment="Left" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="540" Height="301" x:FieldModifier="public" Margin="10,20,10,0" IsReadOnly="True" VerticalScrollBarVisibility="Auto"/>
+
+            <StackPanel Orientation="Horizontal" Margin="0,15,0,0">
+                <Button Name="twitchPlaysButtontest" Content="Start Twtich Plays" HorizontalAlignment="Left" Margin="30,0,0,0" VerticalAlignment="Center" Height="38" Width="144" IsEnabled="False" Click="TwitchPlaysButton_Click"/>
+                <Button x:Name="SkipCurrentTTSButton" Content="Skip Current TTS" HorizontalAlignment="Left" Margin="30,0,0,0" VerticalAlignment="Center" Height="38" Width="144" Click="SkipCurrentTTS_Click" IsEnabled="false"/>
+                <Button x:Name="yetToBeFilledButton" Content="Test Refresh" HorizontalAlignment="Left" Margin="30,0,0,0" VerticalAlignment="Center" Height="38" Width="144" IsEnabled="False" Click="yetToBeFilledButton_Click"/>
+            </StackPanel>
+        </StackPanel>
     </Grid>
 </Window>

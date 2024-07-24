@@ -1,0 +1,87 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
+
+namespace TwitchBot
+{
+    /// <summary>
+    /// Interaction logic for Settings.xaml
+    /// </summary>
+    public partial class Settings : Window
+    {
+        bool isTwitchAPIClientIDSet = true;
+        bool isTwitchAPIClientSecretSet = true;
+
+        public Settings()
+        {
+            InitializeComponent();
+
+            TwitchAPIClientIDTextBox.Text = Properties.Settings.Default.clientid;
+            TwitchAPIClientSecretTextBox.Text = Properties.Settings.Default.clientsecret;
+
+            OBSWebSocketAuthTextBox.Text = Properties.Settings.Default.OBSWebSocketAuth;
+
+            APINinjaKeyTextBox.Text = Properties.Settings.Default.APINinjaKey;
+
+            SpotifyClientIDTextBox.Text = Properties.Settings.Default.SpotifyClientId;
+            SpotifyClientSecretTextBox.Text = Properties.Settings.Default.SpotifyClientSecret;
+        }
+
+        private void SaveChangesButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            //ensures that the aplication will at least connect to Twitch successfully when running application
+            if (TwitchAPIClientIDTextBox.Text == "")
+            {
+                TwitchAPIClientIDErrorMessage.IsEnabled = true;
+                TwitchAPIClientIDErrorMessage.Visibility = Visibility.Visible;
+                isTwitchAPIClientIDSet = false;
+            }
+            else
+            {
+                TwitchAPIClientIDErrorMessage.IsEnabled = false;
+                TwitchAPIClientIDErrorMessage.Visibility = Visibility.Collapsed;
+                isTwitchAPIClientIDSet = true;
+            }
+
+            if (TwitchAPIClientSecretTextBox.Text == "")
+            {
+                TwitchAPIClientSecretErrorMessage.IsEnabled = true;
+                TwitchAPIClientSecretErrorMessage.Visibility = Visibility.Visible;
+                isTwitchAPIClientSecretSet = false;
+            }
+            else
+            {
+                TwitchAPIClientSecretErrorMessage.IsEnabled = false;
+                TwitchAPIClientSecretErrorMessage.Visibility = Visibility.Collapsed;
+                isTwitchAPIClientSecretSet = true;
+            }
+            
+            if(isTwitchAPIClientIDSet && isTwitchAPIClientSecretSet)
+            {
+                Properties.Settings.Default.clientid = TwitchAPIClientIDTextBox.Text;
+                Properties.Settings.Default.clientsecret = TwitchAPIClientSecretTextBox.Text;
+
+                Properties.Settings.Default.OBSWebSocketAuth = OBSWebSocketAuthTextBox.Text;
+
+                Properties.Settings.Default.APINinjaKey = APINinjaKeyTextBox.Text;
+
+                Properties.Settings.Default.SpotifyClientId = SpotifyClientIDTextBox.Text;
+                Properties.Settings.Default.SpotifyClientSecret = SpotifyClientSecretTextBox.Text;
+
+                Properties.Settings.Default.Save();
+                this.Close();
+            }
+        }
+    }
+}

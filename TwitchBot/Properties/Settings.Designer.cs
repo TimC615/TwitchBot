@@ -25,7 +25,7 @@ namespace TwitchBot.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("b35io4wr1yt2k6n9frnfllkraeymo5")]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
         public string clientid {
             get {
                 return ((string)(this["clientid"]));
@@ -37,7 +37,7 @@ namespace TwitchBot.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("9xxjmh1pbnl0vzvwdsx8seh8ja8huc")]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
         public string clientsecret {
             get {
                 return ((string)(this["clientsecret"]));
@@ -49,7 +49,7 @@ namespace TwitchBot.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("CH6huP8qYlSvHeOhvB9vcQ==bCNTg08FarvFkV9I")]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
         public string APINinjaKey {
             get {
                 return ((string)(this["APINinjaKey"]));
@@ -61,7 +61,7 @@ namespace TwitchBot.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("B8HxqfVm10b9oc6a")]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
         public string OBSWebSocketAuth {
             get {
                 return ((string)(this["OBSWebSocketAuth"]));
@@ -73,7 +73,7 @@ namespace TwitchBot.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("fb9e634a97ce4f37a9cbdcf4c10f6765")]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
         public string SpotifyClientId {
             get {
                 return ((string)(this["SpotifyClientId"]));
@@ -85,13 +85,25 @@ namespace TwitchBot.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("cf94d6d575294654825ec6f17944976b")]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
         public string SpotifyClientSecret {
             get {
                 return ((string)(this["SpotifyClientSecret"]));
             }
             set {
                 this["SpotifyClientSecret"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string test {
+            get {
+                return ((string)(this["test"]));
+            }
+            set {
+                this["test"] = value;
             }
         }
     }
