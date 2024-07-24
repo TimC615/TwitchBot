@@ -63,6 +63,7 @@ namespace TwitchBot
             synth.Speak(prompt);
         }
 
+        //used for TTS points redeem
         public void SpeechSynthAsync(string input, int customRate = -100)
         {
             //Trace.WriteLine("SpeechSynth received: " + input);
@@ -76,6 +77,13 @@ namespace TwitchBot
             Prompt prompt = new Prompt(input);
 
             asyncSynth.SpeakAsync(prompt);
+        }
+
+        public void StopSpeechSynthAsync()
+        {
+            asyncSynth.Pause();
+            asyncSynth.SpeakAsyncCancelAll();
+            asyncSynth.Resume();
         }
     }
 }

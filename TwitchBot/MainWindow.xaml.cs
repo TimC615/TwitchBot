@@ -57,20 +57,13 @@ using TwitchLib.Api.Core.Exceptions;
 //TTS Redeem: Spam filter or skip current message button (gui button and bound to keyboard? [scroll lock])
 //Restart bot button?
 
-
-//timeputroulette: re-add mod role. currently timeout diesnt reinstate it
-
-
 //elden ring death counter. maybe automatic? (tie into elden ting itself instead of relying on chat commands)
 //maybe save death counter between app instances by reading from file
 
 
-//look into making an app for buzz to track deaths (make it run off of key presses)
-
-
-
-//issue with ttsredeem where it yells about invalid access token (might be an issue with refreshing new tokens after running code for a while?)
-//might need to put in a system to just ping twitch api every so often
+//look into purposefully making jarbled sound alert sounds. current theory is running obs websocket through port 4455 conflicts with sound alerts
+//might need to temporarily open an obs websocket on port 4455, run sound alert, and close websocket
+//NEW ERROR IDEA: could be caused by enabling the "control audio via OBS" checkbox in the SoundAlerts properties
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
 {
@@ -170,6 +163,12 @@ namespace TwitchBot
 
             connectToTwitch.Opacity = 0.50;
             connectToTwitch.IsEnabled = false;
+
+            SkipCurrentTTSButton.IsEnabled = true;
+            twitchPlaysButton.IsEnabled = true;
+
+            //testing button
+            yetToBeFilledButton.IsEnabled = true;
         }
 
         //Starts countdown if twitch plays is currently off, else disables it
@@ -201,7 +200,12 @@ namespace TwitchBot
         //NOT CURRENTLY USED
         private void ConnectToOBS_Click(object sender, RoutedEventArgs e)
         {
+            
+        }
 
+        private void SkipCurrentTTS_Click(object sender, RoutedEventArgs e)
+        {
+            SpeechSynthObj.StopSpeechSynthAsync();
         }
         //
         //----------------------End of WPF Interaction Methods----------------------
@@ -362,7 +366,8 @@ namespace TwitchBot
             obs.Connected += obs_onConnect;
             obs.Disconnected += obs_onDisconnect;
 
-            obs.ConnectAsync("ws://192.168.2.22:4455", Properties.Settings.Default.OBSWebSocketAuth);
+            //setting port to 4455 conflicts with Sound Alerts. creates jarbled mess of the incoming sound bites
+            obs.ConnectAsync("ws://192.168.2.22:49152", Properties.Settings.Default.OBSWebSocketAuth);
 
             //OBSWebsocketDotNet method documentation available at:
             //https://github.com/BarRaider/obs-websocket-dotnet/blob/master/obs-websocket-dotnet/OBSWebsocket_Requests.cs
@@ -512,7 +517,10 @@ namespace TwitchBot
                         Random random = new Random();
 
                         if (e.Command.ChatMessage.IsMe || e.Command.ChatMessage.IsBroadcaster || e.Command.ChatMessage.IsStaff)
+                        {
+                            OwnerOfChannelConnection.SendMessage(TwitchChannelName, $"Sorry {e.Command.ChatMessage.Username}, you're not able to be timed out so you can't spin the roulette");
                             throw new Exception("User tried to timeout as restricted role");
+                        }
 
                         //1 in 10 chance 
                         if (random.Next(1, 11) == 1)
