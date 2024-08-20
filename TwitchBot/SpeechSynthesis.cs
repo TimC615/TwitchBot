@@ -38,6 +38,8 @@ namespace TwitchBot
         public SpeechSynthesizer synth = new SpeechSynthesizer();
         public SpeechSynthesizer asyncSynth = new SpeechSynthesizer();
 
+        private Queue<Prompt> currAsyncPromptQueue = new Queue<Prompt>();
+
         //use for general TTS needs
         //default value for customRate set to -100 to signify obvious impossible rate value
         public void SpeechSynth(string input, int customRate = -100)
@@ -75,15 +77,36 @@ namespace TwitchBot
                 asyncSynth.Rate = customRate;
 
             Prompt prompt = new Prompt(input);
+            //currAsyncPromptQueue.Enqueue(prompt);
+
+
+
+            //Trace.WriteLine($"State: {asyncSynth.State}");
+
+
+
 
             asyncSynth.SpeakAsync(prompt);
+
+
+            //Trace.WriteLine($"State: {asyncSynth.State}");
         }
 
         public void StopSpeechSynthAsync()
         {
-            asyncSynth.Pause();
-            asyncSynth.SpeakAsyncCancelAll();
-            asyncSynth.Resume();
+            if(currAsyncPromptQueue.Count > 0)
+            {
+                asyncSynth.SpeakAsyncCancel(currAsyncPromptQueue.Dequeue());
+            }
+
+            //asyncSynth.Pause();
+            //asyncSynth.SpeakAsyncCancelAll();
+            //asyncSynth.Resume();
+        }
+
+        private void PlayAsyncPromptQueue()
+        {
+            //Trace.WriteLine asyncSynth.State;
         }
     }
 }

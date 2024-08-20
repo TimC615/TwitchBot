@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TwitchBot"
         mc:Ignorable="d"
-        Title="Twitch Bot" Height="466" Width="560" Closing="MainWindow_Closing" ResizeMode="NoResize">
+        Title="Twitch Bot" Height="466" Width="560" Closing="MainWindow_Closing" ResizeMode="CanMinimize">
     <Grid x:Name="Twitch_Bot" Background="#FFE4D3BF" Margin="0,0,0,0">
 
         <StackPanel Orientation="Vertical">
@@ -13,10 +13,13 @@
             <Menu VerticalAlignment="Top" Width="Auto" Height="20">
                 <MenuItem Header="_File">
                     <MenuItem Name="Settings" Header="_Settings" HorizontalAlignment="Left" Width="140" Click="SettingsButton_Click"/>
-                    <MenuItem x:Name="AppExit" Header="Exit" HorizontalAlignment="Left" Width="140"/>
+                    <MenuItem x:Name="AppExit" Header="Exit" HorizontalAlignment="Left" Width="140" Click="CloseMenuItem_Click"/>
                 </MenuItem>
                 <MenuItem Header="_Launch">
-                    <MenuItem Name="ConnectToTwitch" Header="_Start Bot" HorizontalAlignment="Left" Width="200" Click="connectToTwitch_Click"/>
+                    <MenuItem Name="ConnectToTwitch" Header="_Start Bot" HorizontalAlignment="Left" Width="200" Click="StartBotMenuItem_Click"/>
+                    <MenuItem Name="StopBotMenuItem" Header="_Stop Bot" HorizontalAlignment="Left" Width="200" IsEnabled="False" Click="StopBotMenuItem_Click"/>
+                    <MenuItem Name="RestartBotMenuItem" Header="_Restart Bot" HorizontalAlignment="Left" Width="200" IsEnabled="False" Click="RestartBotMenuItem_Click"/>
+                    <Separator></Separator>
                     <MenuItem Name="twitchPlaysButton" Header="_Start Twitch Plays" HorizontalAlignment="Left" Width="200" IsEnabled="False" Click="TwitchPlaysButton_Click"/>
                 </MenuItem>
             </Menu>
@@ -24,7 +27,7 @@
             <TextBox Name="ConsoleLog" HorizontalAlignment="Left" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="540" Height="301" x:FieldModifier="public" Margin="10,20,10,0" IsReadOnly="True" VerticalScrollBarVisibility="Auto"/>
 
             <StackPanel Orientation="Horizontal" Margin="0,15,0,0">
-                <Button Name="twitchPlaysButtontest" Content="Start Twtich Plays" HorizontalAlignment="Left" Margin="30,0,0,0" VerticalAlignment="Center" Height="38" Width="144" IsEnabled="False" Click="TwitchPlaysButton_Click"/>
+                <!-- Button Name="twitchPlaysButtontest" Content="Start Twtich Plays" HorizontalAlignment="Left" Margin="30,0,0,0" VerticalAlignment="Center" Height="38" Width="144" IsEnabled="False" Click="TwitchPlaysButton_Click"/-->
                 <Button x:Name="SkipCurrentTTSButton" Content="Skip Current TTS" HorizontalAlignment="Left" Margin="30,0,0,0" VerticalAlignment="Center" Height="38" Width="144" Click="SkipCurrentTTS_Click" IsEnabled="false"/>
                 <Button x:Name="yetToBeFilledButton" Content="Test Refresh" HorizontalAlignment="Left" Margin="30,0,0,0" VerticalAlignment="Center" Height="38" Width="144" IsEnabled="False" Click="yetToBeFilledButton_Click"/>
             </StackPanel>

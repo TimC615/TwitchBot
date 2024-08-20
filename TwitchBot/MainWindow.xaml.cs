@@ -56,6 +56,10 @@ using System.Reflection;
 //TTS REDEEM: look into role filtering for custom talking head images
 
 //TTS Redeem: Spam filter or skip current message button (gui button and bound to keyboard? [scroll lock])
+//when new tts redeems are received, add to queue. have seperate method to continually (or some other way?) check for new messages and play the oldest in the queue
+//(assuming no message is actively being played)
+
+
 //Restart bot button?
 
 //elden ring death counter. maybe automatic? (tie into elden ting itself instead of relying on chat commands)
@@ -65,6 +69,13 @@ using System.Reflection;
 //look into purposefully making jarbled sound alert sounds. current theory is running obs websocket through port 4455 conflicts with sound alerts
 //might need to temporarily open an obs websocket on port 4455, run sound alert, and close websocket
 //NEW ERROR IDEA: could be caused by enabling the "control audio via OBS" checkbox in the SoundAlerts properties
+
+
+
+//look into feature that allows user to add static chat commands during run time
+//(would probably need to implement a dictionary stored in a text file. key<string> = chat command [!command]   value<string> = static string to write to chat log)
+
+//fix closing appication issue. (closes window but doesn't stop debugger)
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
 {
@@ -91,7 +102,7 @@ namespace TwitchBot
         private TwitchClient OwnerOfChannelConnection;
         private TwitchAPI TheTwitchAPI;
         private TwitchPubSub PubSub;
-        private static int TIMEOUTROULETTELENGTH = 30;      //timeout length, in seconds
+        private static readonly int TIMEOUTROULETTELENGTH = 30;      //timeout length, in seconds
 
         //API Ninja
         private static HttpClient ninjaAPIConnection { get; set; }
@@ -158,7 +169,97 @@ namespace TwitchBot
         //
         //----------------------WPF Interaction Methods----------------------
         //
-        private void connectToTwitch_Click(object sender, RoutedEventArgs e)
+        private void StartBotMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            StartBot();
+            RestartBotMenuItem.IsEnabled = true;
+            StopBotMenuItem.IsEnabled = true;
+        }
+
+        private void SettingsButton_Click(object sender, RoutedEventArgs e)
+        {
+            settings = new Settings();
+            settings.Owner = this;
+            settings.Show();
+        }
+
+        //Starts countdown if twitch plays is currently off, else disables it
+        private void TwitchPlaysButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (twitchPlaysEnable)
+            {
+                twitchPlaysEnable = false;
+
+                Log($"Twitch Plays disabled");
+                twitchPlaysButton.Header = "Enable Twitch Plays";
+            }
+            //enable Twitch Plays functionality after a 5 second cooldown
+            else
+            {
+                //start countdown on a different thread, freeing up UI thread
+                new Thread(TwitchPlaysCoundown).Start();
+            }
+        }
+
+        private void RestartBotMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            CloseEverything();
+
+            Log($"\n\nRestarting bot...\n\n");
+
+            StartBot();
+        }
+        private void StopBotMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            CloseEverything();
+
+            Log($"\n\nBot has been stopped...\n\n");
+
+            ConnectToTwitch.IsEnabled = true;
+            RestartBotMenuItem.IsEnabled = false;
+            StopBotMenuItem.IsEnabled = false;
+        }
+
+        //NOT CURRENTLY USED
+        private async void yetToBeFilledButton_Click(object sender, RoutedEventArgs e)
+        {
+            //await InitializeSpotifyAPI();
+
+            RefreshAuthToken();
+        }
+
+        //NOT CURRENTLY USED
+        private void ConnectToOBS_Click(object sender, RoutedEventArgs e)
+        {
+            
+        }
+
+        private void SkipCurrentTTS_Click(object sender, RoutedEventArgs e)
+        {
+            SpeechSynthObj.StopSpeechSynthAsync();
+        }
+
+        private void CloseMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            CloseEverything();
+
+            this.Close();
+        }
+
+        //Ensures connections to APIs and local web server is closed when exiting application
+        protected void MainWindow_Closing(object sender, EventArgs e)
+        {
+            CloseEverything();
+        }
+        //
+        //----------------------End of WPF Interaction Methods----------------------
+        //
+
+        //
+        //----------------------Initialization Methods----------------------
+        //
+
+        void StartBot()
         {
             initializeWebServer();
 
@@ -184,56 +285,6 @@ namespace TwitchBot
             //testing button
             yetToBeFilledButton.IsEnabled = true;
         }
-
-        private void SettingsButton_Click(object sender, RoutedEventArgs e)
-        {
-            settings = new Settings();
-            settings.Show();
-        }
-
-        //Starts countdown if twitch plays is currently off, else disables it
-        private void TwitchPlaysButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (twitchPlaysEnable)
-            {
-                twitchPlaysEnable = false;
-
-                Log($"Twitch Plays disabled");
-                twitchPlaysButton.Header = "Enable Twitch Plays";
-            }
-            //enable Twitch Plays functionality after a 5 second cooldown
-            else
-            {
-                //start countdown on a different thread, freeing up UI thread
-                new Thread(TwitchPlaysCoundown).Start();
-            }
-        }
-
-        //NOT CURRENTLY USED
-        private async void yetToBeFilledButton_Click(object sender, RoutedEventArgs e)
-        {
-            //await InitializeSpotifyAPI();
-
-            RefreshAuthToken();
-        }
-
-        //NOT CURRENTLY USED
-        private void ConnectToOBS_Click(object sender, RoutedEventArgs e)
-        {
-            
-        }
-
-        private void SkipCurrentTTS_Click(object sender, RoutedEventArgs e)
-        {
-            SpeechSynthObj.StopSpeechSynthAsync();
-        }
-        //
-        //----------------------End of WPF Interaction Methods----------------------
-        //
-
-        //
-        //----------------------Initialization Methods----------------------
-        //
 
         void initializeWebServer()
         {
@@ -406,7 +457,7 @@ namespace TwitchBot
 
         private void OwnerOfChannelConnection_OnDisconnected(object sender, TwitchLib.Communication.Events.OnDisconnectedEventArgs e)
         {
-            Log($"OnDisconnected event");
+            Log($"OwnerOfChannel OnDisconnected event");
         }
 
         private void OwnerOfChannelConnection_OnLog(object sender, TwitchLib.Client.Events.OnLogArgs e)
@@ -661,7 +712,7 @@ namespace TwitchBot
 
         private void PubSub_OnServiceError(object sender, OnPubSubServiceErrorArgs e)
         {
-            Log("PubSub Service Error: " + e.Exception.Message);
+            Log($"PubSub Service Error: {e.Exception.Message} {e.Exception}");
         }
 
         private void PubSub_OnChannelPointsRewardRedeemed(object sender, OnChannelPointsRewardRedeemedArgs e)
@@ -1111,8 +1162,7 @@ namespace TwitchBot
             }
         }
 
-        //Ensures connections to APIs and local web server is closed when exiting application
-        protected void MainWindow_Closing(object sender, EventArgs e)
+        void CloseEverything()
         {
             //could probably just call Application.Exit()
             if (OwnerOfChannelConnection != null)
@@ -1122,7 +1172,7 @@ namespace TwitchBot
 
             if (WebServer != null)
             {
-                WebServer.Stop();
+                //WebServer.Stop();
                 WebServer.Dispose();
             }
 
@@ -1141,10 +1191,12 @@ namespace TwitchBot
                 obs.Disconnect();
             }
 
-            if (settings!= null && settings.IsVisible)
+            if (settings != null && settings.IsVisible)
             {
                 settings.Close();
             }
+
+            Log($"Bot connections closed");
         }
 
         //
