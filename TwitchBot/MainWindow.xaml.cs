@@ -26,6 +26,9 @@ using System.Net.Sockets;
 using TwitchLib.Api.Auth;
 using TwitchLib.Api.Core.Exceptions;
 using System.Reflection;
+using TwitchLib.Api.Helix.Models.Users.GetUsers;
+using TwitchLib.Api.Helix.Models.Moderation.GetModerators;
+using TwitchLib.Api.Helix.Models.Moderation.GetBannedUsers;
 
 
 //Base functionality taken from HonestDanGames' Youtube channel https://youtu.be/Ufgq6_QhVKw?si=QYBbDl0sYVCy3QVF
@@ -75,7 +78,11 @@ using System.Reflection;
 //look into feature that allows user to add static chat commands during run time
 //(would probably need to implement a dictionary stored in a text file. key<string> = chat command [!command]   value<string> = static string to write to chat log)
 
-//fix closing appication issue. (closes window but doesn't stop debugger)
+//re-moding people after roulette issue (doesn't reinstate role)
+//test out .mod() to see how things work
+
+//see if toggling enabled points redeems is possible
+//also disable pngtuber when redeemed
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
 {
@@ -89,7 +96,8 @@ namespace TwitchBot
         private readonly List<string> Scopes = new List<string>
         { "user:edit", "chat:read", "chat:edit", "channel:moderate", "bits:read",
             "channel:read:subscriptions", "user:read:email", "user:read:subscriptions", "channel:manage:redemptions",
-            "channel:edit:commercial", "channel:manage:ads", "user:read:email", "moderator:manage:banned_users"
+            "channel:edit:commercial", "channel:manage:ads", "user:read:email", "moderator:manage:banned_users",
+            "moderation:read", "channel:manage:moderators"
         };
         //find more Twitch API scopes at https://dev.twitch.tv/docs/authentication/scopes/
 
@@ -225,7 +233,9 @@ namespace TwitchBot
         {
             //await InitializeSpotifyAPI();
 
-            RefreshAuthToken();
+            //RefreshAuthToken();
+
+
         }
 
         //NOT CURRENTLY USED
@@ -237,6 +247,136 @@ namespace TwitchBot
         private void SkipCurrentTTS_Click(object sender, RoutedEventArgs e)
         {
             SpeechSynthObj.StopSpeechSynthAsync();
+        }
+
+        async private void TestButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                List<string> testSearchUsers = new List<string>();
+                testSearchUsers.Add("cakebot___");
+
+                GetUsersResponse usersResult = await TheTwitchAPI.Helix.Users.GetUsersAsync(null, testSearchUsers);
+                Log($"{usersResult.Users[0].Login} -> {usersResult.Users[0].Id}");
+
+                List<string> testSearchMods = new List<string>();
+                testSearchMods.Add(usersResult.Users[0].Id);
+                GetModeratorsResponse modsResult = await TheTwitchAPI.Helix.Moderation.GetModeratorsAsync(TwitchChannelId, testSearchMods);
+
+                if (modsResult.Data.Length > 0)
+                    Log($"{modsResult.Data[0].UserName} is a mod");
+                else
+                    Log($"{usersResult.Users[0].Login} is NOT a mod");
+            }
+            catch(Exception ex)
+            {
+                Log($"TestButton Error: {ex.Message}");
+            }
+        }
+
+        async private void TestModButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                List<string> testSearchUsers = new List<string>();
+                testSearchUsers.Add("cakebot___");
+
+                GetUsersResponse usersResult = await TheTwitchAPI.Helix.Users.GetUsersAsync(null, testSearchUsers);
+                Log($"{usersResult.Users[0].Login} -> {usersResult.Users[0].Id}");
+
+                List<string> testSearchMods = new List<string>();
+                testSearchMods.Add(usersResult.Users[0].Id);
+                GetModeratorsResponse modsResult = await TheTwitchAPI.Helix.Moderation.GetModeratorsAsync(TwitchChannelId);
+
+                string output = "";
+
+                foreach (var entry in modsResult.Data)
+                {
+                    if (output == "")
+                        output += entry.UserName;
+                    else
+                        output += ", " + entry.UserName;
+                }
+                Log($"Mods: {output}");
+
+                await TheTwitchAPI.Helix.Moderation.UnbanUserAsync(TwitchChannelId, TwitchChannelId, usersResult.Users[0].Id);
+
+                await TheTwitchAPI.Helix.Moderation.AddChannelModeratorAsync(TwitchChannelId, usersResult.Users[0].Id);
+
+                GetModeratorsResponse modsResult2 = await TheTwitchAPI.Helix.Moderation.GetModeratorsAsync(TwitchChannelId);
+
+                output = "";
+
+                foreach (var entry in modsResult2.Data)
+                {
+                    if (output == "")
+                        output += entry.UserName;
+                    else
+                        output += ", " + entry.UserName;
+                }
+                Log($"Mods: {output}");
+            }
+            catch (Exception ex)
+            {
+                Log($"TestModButton Error: {ex.Message}");
+            }
+        }
+
+        async private void TestUnmodButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                List<string> testSearchUsers = new List<string>();
+                testSearchUsers.Add("cakebot___");
+
+                GetUsersResponse usersResult = await TheTwitchAPI.Helix.Users.GetUsersAsync(null, testSearchUsers);
+                Log($"{usersResult.Users[0].Login} -> {usersResult.Users[0].Id}");
+
+                List<string> testSearchMods = new List<string>();
+                testSearchMods.Add(usersResult.Users[0].Id);
+                GetModeratorsResponse modsResult = await TheTwitchAPI.Helix.Moderation.GetModeratorsAsync(TwitchChannelId);
+
+                string output = "";
+
+                foreach (var entry in modsResult.Data)
+                {
+                    if (output == "")
+                        output += entry.UserName;
+                    else
+                        output += ", " + entry.UserName;
+                }
+                Log($"Mods: {output}");
+
+
+                //ban info for current user
+                BanUserRequest request = new BanUserRequest();
+                request.UserId = usersResult.Users[0].Id;
+                request.Reason = "Test to see if banning works";
+                request.Duration = 20;
+
+                //add specific channel and acting moderator info to current user ban info
+                BanUserResponse result = TheTwitchAPI.Helix.Moderation.BanUserAsync(
+                    TwitchChannelId,
+                    TwitchChannelId,
+                    request
+                    ).Result;
+
+                GetBannedUsersResponse bannedResult = await TheTwitchAPI.Helix.Moderation.GetBannedUsersAsync(TwitchChannelId, testSearchMods);
+                output = "";
+
+                foreach (var entry in bannedResult.Data)
+                {
+                    if (output == "")
+                        output += entry.UserName;
+                    else
+                        output += ", " + entry.UserName;
+                }
+                Log($"Mods: {output}");
+            }
+            catch (Exception ex)
+            {
+                Log($"TestUnmodButton Error: {ex.Message}");
+            }
         }
 
         private void CloseMenuItem_Click(object sender, RoutedEventArgs e)
@@ -281,6 +421,10 @@ namespace TwitchBot
 
             SkipCurrentTTSButton.IsEnabled = true;
             twitchPlaysButton.IsEnabled = true;
+
+            TestButton.IsEnabled = true;
+            TestModButton.IsEnabled = true;
+            TestUnmodButton.IsEnabled = true;
 
             //testing button
             yetToBeFilledButton.IsEnabled = true;
@@ -416,7 +560,8 @@ namespace TwitchBot
             PubSub.OnPubSubServiceError += PubSub_OnServiceError;
 
             PubSub.ListenToChannelPoints(TwitchChannelId);
-            PubSub.ListenToVideoPlayback(TwitchChannelId);        //used for StreamUp() and StreamDown()?? Maybe??
+            //PubSub.ListenToVideoPlayback(TwitchChannelId);      //used for StreamUp() and StreamDown()?? Maybe??
+            //PubSub.ListenToBitsEventsV2(TwitchChannelId);
 
             PubSub.Connect();
         }
@@ -548,7 +693,15 @@ namespace TwitchBot
                         if (die > 1)
                         {
                             long result = random.NextInt64(1, die + 1);
-                            OwnerOfChannelConnection.SendMessage(TwitchChannelName, "You rolled: " + result);
+
+                            if (result == 1)
+                            {
+                                OwnerOfChannelConnection.SendMessage(TwitchChannelName, "You rolled: " + result + " ...you failure");
+                            }
+                            else
+                            {
+                                OwnerOfChannelConnection.SendMessage(TwitchChannelName, "You rolled: " + result);
+                            }
                         }
                     }
                     catch (Exception except)
@@ -739,14 +892,19 @@ namespace TwitchBot
 
                             //Log("1: " + e.RewardRedeemed.Redemption.Status);
 
+                            int reactiveImageID = obs.GetSceneItemId(currSceneName, "Reactive Images - Myself", 0);
+                            bool reactiveImageEnabled = obs.GetSceneItemEnabled(currSceneName, reactiveImageID);
+
                             if (!webcamEnabled)
                             {
                                 obs.SetSceneItemEnabled(currSceneName, webcamItemID, true);
+                                obs.SetSceneItemEnabled(currSceneName, reactiveImageID, false);
                                 Log("Toggle Webcam: Webcam enabled");
                             }
                             else
                             {
                                 obs.SetSceneItemEnabled(currSceneName, webcamItemID, false);
+                                obs.SetSceneItemEnabled(currSceneName, reactiveImageID, true);
                                 Log("Toggle Webcam: Webcam disabled");
                             }
                             //e.RewardRedeemed.Redemption.Status = "FULFILLED";
@@ -1121,15 +1279,24 @@ namespace TwitchBot
             }
         }
 
-        private void ReinstateModRole(string userIdToMod, string username, int banLength)
+        async private void ReinstateModRole(string userIdToMod, string username, int banLength)
         {
+            //------------------------------TEST  (add 2 seconds to sleep. might fix issue of mods not getting role back )
             Thread.Sleep(banLength * 1000); //wait for user's timeout to finish (seconds)
 
             try
             {
-                OwnerOfChannelConnection.Mod(TwitchChannelName, userIdToMod);
+                //OwnerOfChannelConnection.Mod(TwitchChannelName, userIdToMod);
+                await TheTwitchAPI.Helix.Moderation.AddChannelModeratorAsync(TwitchChannelId, userIdToMod);
 
-                Log($"ReinstateModRole: Reinstated mod role for {username} (userID: {userIdToMod})");
+                List<string> testSearchMods = new List<string>();
+                testSearchMods.Add(userIdToMod);
+                GetModeratorsResponse modsResult = await TheTwitchAPI.Helix.Moderation.GetModeratorsAsync(TwitchChannelId, testSearchMods);
+
+                if (modsResult.Data.Length > 0)
+                    Log($"Mod Role reinstated for: {modsResult.Data[0].UserName}");
+                else
+                    throw new Exception("Unable to restore mod role for: {modsResult.Data[0].UserName}");
             }
             catch (Exception except)
             {
@@ -1198,7 +1365,6 @@ namespace TwitchBot
 
             Log($"Bot connections closed");
         }
-
         //
         //----------------------End of Utility Methods----------------------
         //
