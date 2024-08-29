@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Swan;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -35,10 +36,22 @@ namespace TwitchBot
     {
         static readonly int SPEECHSYNTH_VOL = 80;
         public static readonly int SPEECHSYNTH_RATE = 0;
-        public SpeechSynthesizer synth = new SpeechSynthesizer();
-        public SpeechSynthesizer asyncSynth = new SpeechSynthesizer();
+        public SpeechSynthesizer synth;
+        public SpeechSynthesizer asyncSynth;
+
+        public bool asyncIsPaused = false;
 
         private Queue<Prompt> currAsyncPromptQueue = new Queue<Prompt>();
+
+        public SpeechSynthesis()
+        {
+            synth = new SpeechSynthesizer();
+
+            asyncSynth = new SpeechSynthesizer();
+            asyncSynth.SpeakStarted += SpeechSynthAsyncPromptStart;
+            asyncSynth.SpeakCompleted += SpeechSynthAsyncPromptEnd;
+        }
+        
 
         //use for general TTS needs
         //default value for customRate set to -100 to signify obvious impossible rate value
@@ -92,21 +105,41 @@ namespace TwitchBot
             //Trace.WriteLine($"State: {asyncSynth.State}");
         }
 
-        public void StopSpeechSynthAsync()
+        public void SpeechSynthAsyncPromptStart(object sender, SpeakStartedEventArgs e)
         {
-            if(currAsyncPromptQueue.Count > 0)
-            {
-                asyncSynth.SpeakAsyncCancel(currAsyncPromptQueue.Dequeue());
-            }
-
-            //asyncSynth.Pause();
-            //asyncSynth.SpeakAsyncCancelAll();
-            //asyncSynth.Resume();
+            Trace.WriteLine($"Async Speech Synth: SPEAKING STARTED");
         }
 
-        private void PlayAsyncPromptQueue()
+        public void SpeechSynthAsyncPromptEnd(object sender, SpeakCompletedEventArgs e)
         {
-            //Trace.WriteLine asyncSynth.State;
+            Trace.WriteLine($"Async Speech Synth: SPEAKING ENDED");
+        }
+
+        public void SkipCurrentSpeechSynthAsync()
+        {
+            Prompt currPrompt = asyncSynth.GetCurrentlySpokenPrompt();
+            //Trace.WriteLine($"Current speech prompt: {currPrompt.Stringify()}");
+            asyncSynth.SpeakAsyncCancel(currPrompt);
+        }
+
+        public void ClearAllSpeechSynthAsyncPrompts()
+        {
+            Trace.WriteLine($"Async Speech Synth: All prompts cancelled");
+            asyncSynth.SpeakAsyncCancelAll();
+        }
+
+        public void PauseSpeechSynthAsync()
+        {
+            Trace.WriteLine($"Async Speech Synth: Speech paused");
+            asyncSynth.Pause();
+            asyncIsPaused = true;
+        }
+
+        public void ResumeSpeechSynthAsync()
+        {
+            Trace.WriteLine($"Async Speech Synth: Speech resumed");
+            asyncSynth.Resume();
+            asyncIsPaused = false;
         }
     }
 }

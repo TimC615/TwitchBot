@@ -58,12 +58,9 @@ using TwitchLib.Api.Helix.Models.Moderation.GetBannedUsers;
 
 //TTS REDEEM: look into role filtering for custom talking head images
 
-//TTS Redeem: Spam filter or skip current message button (gui button and bound to keyboard? [scroll lock])
-//when new tts redeems are received, add to queue. have seperate method to continually (or some other way?) check for new messages and play the oldest in the queue
-//(assuming no message is actively being played)
+//TTS Redeem: look into spam filter
+//potentially have the skip (or other state changes of TTS) bound to global hotkey button like what's done in death counter program
 
-
-//Restart bot button?
 
 //elden ring death counter. maybe automatic? (tie into elden ting itself instead of relying on chat commands)
 //maybe save death counter between app instances by reading from file
@@ -78,11 +75,7 @@ using TwitchLib.Api.Helix.Models.Moderation.GetBannedUsers;
 //look into feature that allows user to add static chat commands during run time
 //(would probably need to implement a dictionary stored in a text file. key<string> = chat command [!command]   value<string> = static string to write to chat log)
 
-//re-moding people after roulette issue (doesn't reinstate role)
-//test out .mod() to see how things work
-
 //see if toggling enabled points redeems is possible
-//also disable pngtuber when redeemed
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
 {
@@ -226,6 +219,10 @@ namespace TwitchBot
             ConnectToTwitch.IsEnabled = true;
             RestartBotMenuItem.IsEnabled = false;
             StopBotMenuItem.IsEnabled = false;
+
+            SpeechSynthPauseResume.IsEnabled = false;
+            SpeechSynthClearAllPrompts.IsEnabled = false;
+            twitchPlaysButton.IsEnabled = false;
         }
 
         //NOT CURRENTLY USED
@@ -246,7 +243,29 @@ namespace TwitchBot
 
         private void SkipCurrentTTS_Click(object sender, RoutedEventArgs e)
         {
-            SpeechSynthObj.StopSpeechSynthAsync();
+            SpeechSynthObj.SkipCurrentSpeechSynthAsync();
+        }
+
+        private void PauseResumeTTSMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+
+            if (!SpeechSynthObj.asyncIsPaused)
+            {
+                SpeechSynthObj.PauseSpeechSynthAsync();
+                SpeechSynthPauseResume.Header = "_Resume TTS";
+                Log($"\nTTS has been paused\n");
+            }
+            else
+            {
+                SpeechSynthObj.ResumeSpeechSynthAsync();
+                SpeechSynthPauseResume.Header = "_Pause TTS";
+                Log($"\nTTS has been resumed\n");
+            }
+        }
+
+        private void ClearAllTTSPromptsMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            SpeechSynthObj.ClearAllSpeechSynthAsyncPrompts();
         }
 
         async private void TestButton_Click(object sender, RoutedEventArgs e)
@@ -425,6 +444,10 @@ namespace TwitchBot
             TestButton.IsEnabled = true;
             TestModButton.IsEnabled = true;
             TestUnmodButton.IsEnabled = true;
+
+            SpeechSynthPauseResume.IsEnabled = true;
+            SpeechSynthPauseResume.Header = "_Pause TTS";
+            SpeechSynthClearAllPrompts.IsEnabled = true;
 
             //testing button
             yetToBeFilledButton.IsEnabled = true;
@@ -1331,7 +1354,6 @@ namespace TwitchBot
 
         void CloseEverything()
         {
-            //could probably just call Application.Exit()
             if (OwnerOfChannelConnection != null)
             {
                 OwnerOfChannelConnection.Disconnect();
@@ -1362,6 +1384,10 @@ namespace TwitchBot
             {
                 settings.Close();
             }
+
+            //ensure tts queue is fully cleared (assuming user is just restarting/stopping bot instead of full shutdown)
+            SpeechSynthObj.ClearAllSpeechSynthAsyncPrompts();
+            SpeechSynthObj.ResumeSpeechSynthAsync();                //allows tts to function again if bot is stopping/restarting
 
             Log($"Bot connections closed");
         }
