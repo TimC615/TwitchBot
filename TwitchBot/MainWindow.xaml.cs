@@ -756,7 +756,7 @@ namespace TwitchBot
                                     break;
                                 case "roll":
                                     OwnerOfChannelConnection.SendMessage(TwitchChannelName,
-                                        "Enter \"!roll d<number of sides>\" and just put in however many sides you want (e.g. !roll d6)");
+                                        "Enter \"!roll d<number of sides>\" to roll a single die or \"!roll <number of dice>d<number of sides>\" to roll multiple dice! (e.g. !roll d6) or !roll 3d20");
                                     break;
                                 case "roulette":
                                     OwnerOfChannelConnection.SendMessage(TwitchChannelName,
@@ -782,21 +782,55 @@ namespace TwitchBot
 
                     try
                     {
+                        //retrieve and split roll command into 2 segments: *number of dice* and *size of die*
                         List<string> rollCommand = e.Command.ArgumentsAsList;
-                        long die = Int64.Parse(rollCommand[0].ToLower().Remove(0, 1));
 
-                        Random random = new Random();
-                        if (die > 1)
+                        string rollInput = rollCommand[0].ToLower();
+                        string[] rollParams;
+
+                        if (!rollInput.Contains("d"))
                         {
-                            long result = random.NextInt64(1, die + 1);
+                            rollParams = ["1", rollInput];
+                        }
+                        else
+                            rollParams = rollInput.Split("d");
 
-                            if (result == 1)
+
+                        //convert param0 to a long
+                        int diceToRoll;
+                        try
+                        {
+                            //take care of all reasonable ways a user might want to roll just 1 die
+                            if (rollParams[0] == null || rollParams[0] == "" || rollParams[0] == "1")
                             {
-                                OwnerOfChannelConnection.SendMessage(TwitchChannelName, "You rolled: " + result + " ...you failure");
+                                diceToRoll = 1;
                             }
                             else
                             {
-                                OwnerOfChannelConnection.SendMessage(TwitchChannelName, "You rolled: " + result);
+                                diceToRoll = Int32.Parse(rollParams[0]);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Log("Roll command error converting param 0: " + ex.Message);
+                            OwnerOfChannelConnection.SendMessage(TwitchChannelName, "The number of dice to roll needs to be a whole number greater than or equal to 1");
+                            diceToRoll = -1;
+                        }
+
+                        //try to convert param[1] to long if param[0] was a valid number
+                        if(diceToRoll != -1)
+                        {
+                            try
+                            {
+                                long sizeOfDie = Int64.Parse(rollParams[1]);
+                                if (sizeOfDie <= 1)
+                                    OwnerOfChannelConnection.SendMessage(TwitchChannelName, "The size of the die to roll needs to be a whole number greater than 1");
+                                else
+                                    Roll(diceToRoll, sizeOfDie);    //method assumes provided parameters are always valid numbers
+                            }
+                            catch (Exception ex)
+                            {
+                                Log("Roll command error converting param 1: " + ex.Message);
                             }
                         }
                     }
@@ -1424,6 +1458,28 @@ namespace TwitchBot
             {
                 Log("CloseTTSFace Error: " + e.Message);
             }
+        }
+
+        //handles returning a total value for !roll chat command
+        public void Roll(long numOfDice, long sizeOfDie)
+        {
+            Random random = new Random();
+            long total = 0;
+
+            for(int x = 1; x <= numOfDice; x++)
+            {
+                total += random.NextInt64(1, sizeOfDie + 1);
+            }
+
+            if (total == 1)
+            {
+                OwnerOfChannelConnection.SendMessage(TwitchChannelName, "You rolled: a nat 1! Good job!");
+            }
+            else
+            {
+                OwnerOfChannelConnection.SendMessage(TwitchChannelName, "You rolled: " + total);
+            }
+
         }
 
         void CloseEverything()
