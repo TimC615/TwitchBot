@@ -29,6 +29,8 @@ using System.Reflection;
 using TwitchLib.Api.Helix.Models.Users.GetUsers;
 using TwitchLib.Api.Helix.Models.Moderation.GetModerators;
 using TwitchLib.Api.Helix.Models.Moderation.GetBannedUsers;
+using System.Runtime.InteropServices;
+using System.Security.Policy;
 
 
 //Base functionality taken from HonestDanGames' Youtube channel https://youtu.be/Ufgq6_QhVKw?si=QYBbDl0sYVCy3QVF
@@ -60,6 +62,7 @@ using TwitchLib.Api.Helix.Models.Moderation.GetBannedUsers;
 
 //TTS Redeem: look into spam filter
 //potentially have the skip (or other state changes of TTS) bound to global hotkey button like what's done in death counter program
+//manual skip button implemented. still undecided on spam filter
 
 
 //elden ring death counter. maybe automatic? (tie into elden ting itself instead of relying on chat commands)
@@ -76,6 +79,8 @@ using TwitchLib.Api.Helix.Models.Moderation.GetBannedUsers;
 //(would probably need to implement a dictionary stored in a text file. key<string> = chat command [!command]   value<string> = static string to write to chat log)
 
 //see if toggling enabled points redeems is possible
+
+//look into only connecting to obs websocket when needed (maybe to avoid borking sound alerts????)
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
 {
@@ -143,7 +148,7 @@ namespace TwitchBot
         //Bot Commands
         readonly Dictionary<string, string> CommandsStaticResponses = new Dictionary<string, string>
         {
-            { "commands", "The current chat commands are: help, about, discord, twitter, lurk, roll, fact, roll, and roulette" },
+            { "commands", "The current chat commands are: help, about, discord, twitter, lurk, joke, fact, roll, and roulette" },
             { "about", "Hello! I'm TheCakeIsAPie__ and I'm a Canadian variety streamer. We play a bunch of stuff over here in this small corner of the internet. Come pop a seat and have fun watching the shenanigans!"},
             { "discord", "Join the discord server at: https://discord.gg/uzHqnxKKkC"},
             { "twitter", "Follow me on Twitter at: https://twitter.com/TheCakeIsAPi"},
@@ -270,6 +275,7 @@ namespace TwitchBot
 
         async private void TestButton_Click(object sender, RoutedEventArgs e)
         {
+            /*
             try
             {
                 List<string> testSearchUsers = new List<string>();
@@ -291,6 +297,67 @@ namespace TwitchBot
             {
                 Log($"TestButton Error: {ex.Message}");
             }
+            */
+
+
+            string url = "https://www.youtube.com/";
+
+
+            try
+            {
+                string _systemRoot = Environment.GetEnvironmentVariable("SYSTEMROOT");
+                Log("SystemRoot: " + _systemRoot);
+
+                //Process.Start("chrome.exe", url);
+
+                //Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+
+                ProcessStartInfo testPSI = new ProcessStartInfo()
+                {
+                    UseShellExecute = true,
+                    //FileName = url,
+                    FileName = url
+                    //WorkingDirectory = _systemRoot
+                };
+                //testPSI.Arguments = "MainWindow.xaml.cs";
+
+                Log("WorkingDirectory: " + testPSI.WorkingDirectory);
+
+                Process.Start(testPSI);
+            }
+            catch (Exception ex)
+            {
+                Log("Test Button Error: " + ex.Message);
+            }
+
+            /*
+            try
+            {
+                Process.Start(url);
+            }
+            catch
+            {
+                // hack because of this: https://github.com/dotnet/corefx/issues/10361
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    url = url.Replace("&", "^&");
+                    Process.Start(new ProcessStartInfo("cmd", $"/c start {url}") { CreateNoWindow = true });
+                }
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    Process.Start("xdg-open", url);
+                }
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+                    Process.Start("open", url);
+                }
+                else
+                {
+                    throw;
+                }
+            }
+            */
+
         }
 
         async private void TestModButton_Click(object sender, RoutedEventArgs e)
@@ -426,14 +493,20 @@ namespace TwitchBot
             var authUrl = "https://id.twitch.tv/oauth2/authorize?response_type=code&client_id=" +
                 ClientId + "&redirect_uri=" + RedirectUri + "&scope=" + String.Join("+", Scopes);
 
-            Trace.WriteLine(authUrl);
-
-
-            System.Diagnostics.Process.Start(new ProcessStartInfo
+            //launch the above authUrl to connect to twitch, allow permissions, and start the proces of retrieving auth tokens
+            try
             {
-                FileName = authUrl,
-                UseShellExecute = true
-            });
+                ProcessStartInfo twitchAuthBrowser = new ProcessStartInfo()
+                {
+                    UseShellExecute = true,
+                    FileName = authUrl
+                };
+                Process.Start(twitchAuthBrowser);
+            }
+            catch (Exception ex)
+            {
+                Log("StartBot Open URL Error: " + ex.Message);
+            }
 
             ConnectToTwitch.Opacity = 0.50;
             ConnectToTwitch.IsEnabled = false;
@@ -441,7 +514,7 @@ namespace TwitchBot
             SkipCurrentTTSButton.IsEnabled = true;
             twitchPlaysButton.IsEnabled = true;
 
-            TestButton.IsEnabled = true;
+            //TestButton.IsEnabled = true;
             TestModButton.IsEnabled = true;
             TestUnmodButton.IsEnabled = true;
 
@@ -583,7 +656,7 @@ namespace TwitchBot
             PubSub.OnPubSubServiceError += PubSub_OnServiceError;
 
             PubSub.ListenToChannelPoints(TwitchChannelId);
-            //PubSub.ListenToVideoPlayback(TwitchChannelId);      //used for StreamUp() and StreamDown()?? Maybe??
+            PubSub.ListenToVideoPlayback(TwitchChannelId);      //USED FOR DETECTING WHEN ADS START  //used for StreamUp() and StreamDown()?? Maybe??
             //PubSub.ListenToBitsEventsV2(TwitchChannelId);
 
             PubSub.Connect();
@@ -1212,7 +1285,8 @@ namespace TwitchBot
             }
 
             Thread.Sleep(threadSleepLength);
-            OwnerOfChannelConnection.SendMessage(TwitchChannelName, "Ad break is now done!");
+            Log("PubSub_OnCommercial: Ads have finished");
+            //OwnerOfChannelConnection.SendMessage(TwitchChannelName, "Ad break is now done!");
         }
 
         //Ping API Ninja for a fact and output to twitch chat
