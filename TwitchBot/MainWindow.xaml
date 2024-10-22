@@ -27,7 +27,11 @@
                     <Separator></Separator>
                     <MenuItem Name="SpeechSynthClearAllPrompts" Header="_Clear TTS Queue" HorizontalAlignment="Left" Width="200" IsEnabled="False" Click="ClearAllTTSPromptsMenuItem_Click"/>
                 </MenuItem>
-                <MenuItem Header="_Advanced" Click="MenuItem_Click">
+                <MenuItem Header="_OBS">
+                    <MenuItem Name="ConnectOBS" Header="_Connect OBS" HorizontalAlignment="Left" Width="200" IsEnabled="False" Click="ConnectOBSMenuItem_Click"/>
+                    <MenuItem Name="DisconnectOBS" Header="_Disconnect OBS" HorizontalAlignment="Left" Width="200" IsEnabled="False" Click="DisconnectOBSMenuItem_Click"/>
+                </MenuItem>
+                <MenuItem Header="_Advanced">
                     <MenuItem Name="CheckCurrentAccessToken" Header="_Check Access Token" HorizontalAlignment="Left" Width="200" IsEnabled="False" Click="CheckAccessTokenMenuItem_Click"/>
                 </MenuItem>
             </Menu>

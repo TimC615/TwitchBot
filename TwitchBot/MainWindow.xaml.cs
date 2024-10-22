@@ -247,12 +247,6 @@ namespace TwitchBot
             TestButton.IsEnabled = false;
         }
 
-        //NOT CURRENTLY USED
-        private void ConnectToOBS_Click(object sender, RoutedEventArgs e)
-        {
-            
-        }
-
         private void SkipCurrentTTS_Click(object sender, RoutedEventArgs e)
         {
             SpeechSynthObj.SkipCurrentSpeechSynthAsync();
@@ -278,6 +272,19 @@ namespace TwitchBot
         private void ClearAllTTSPromptsMenuItem_Click(object sender, RoutedEventArgs e)
         {
             SpeechSynthObj.ClearAllSpeechSynthAsyncPrompts();
+        }
+
+        private void ConnectOBSMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            initializeOBSWebSocket();
+        }
+
+        private void DisconnectOBSMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (obs != null)
+            {
+                obs.Disconnect();
+            }
         }
 
         async private void TestButton_Click(object sender, RoutedEventArgs e)
@@ -1060,6 +1067,11 @@ namespace TwitchBot
         {
             Log("OBS connected");
             obsConnected = true;
+
+            Dispatcher.BeginInvoke(new Action(() => {
+                ConnectOBS.IsEnabled = false;
+                DisconnectOBS.IsEnabled = true;
+            }));
         }
 
         private void obs_onDisconnect(object sender, OBSWebsocketDotNet.Communication.ObsDisconnectionInfo e)
@@ -1077,6 +1089,12 @@ namespace TwitchBot
             {
                 Log("obs_onDisconnect error: " + ex.Message);
             }
+
+            Dispatcher.BeginInvoke(new Action(() => {
+                ConnectOBS.IsEnabled = true;
+                DisconnectOBS.IsEnabled = false;
+            }));
+            
         }
         //
         //----------------------End of OBS Event Hookups----------------------
@@ -1424,7 +1442,7 @@ namespace TwitchBot
                 }
             }
             else
-                Log($"Current access token is valid");
+                Log($"Current access token is valid for {tokenResult.ExpiresIn} seconds");
         }
 
         async private void ReinstateModRole(string userIdToMod, string username, int banLength)
