@@ -32,6 +32,7 @@ using TwitchLib.Api.Helix.Models.Moderation.GetBannedUsers;
 using System.Runtime.InteropServices;
 using System.Security.Policy;
 using TwitchLib.Api.Helix.Models.Streams.CreateStreamMarker;
+using OBSWebsocketDotNet.Communication;
 
 
 //Base functionality taken from HonestDanGames' Youtube channel https://youtu.be/Ufgq6_QhVKw?si=QYBbDl0sYVCy3QVF
@@ -1076,20 +1077,28 @@ namespace TwitchBot
 
         private void obs_onDisconnect(object sender, OBSWebsocketDotNet.Communication.ObsDisconnectionInfo e)
         {
-            //trycatch used becasue controlled disconnects throw error with debug output
-            try
+            //Allows for more descriptive error message in cases where OBS isn't running. Normally would output "Unknown reason"
+            if (Process.GetProcessesByName("obs64").Length == 0)
             {
-                //normal output
-                Log("OBS disconnect code " + e.ObsCloseCode + ": " + e.DisconnectReason);
-
-                //debug output (do not use during normal operation)
-                //Log("OBS disconnect code " + e.ObsCloseCode + ": " + e.DisconnectReason + " : " + e.WebsocketDisconnectionInfo.Exception.ToString());
+                Log("OBS is not actively running");
             }
-            catch (Exception ex)
+            else
             {
-                Log("obs_onDisconnect error: " + ex.Message);
-            }
+                //trycatch used becasue controlled disconnects throw error with debug output
+                try
+                {
+                    //normal output
+                    Log("OBS disconnect code " + e.ObsCloseCode + ": " + e.DisconnectReason);
 
+                    //debug output (do not use during normal operation)
+                    //Log("OBS disconnect code " + e.ObsCloseCode + ": " + e.DisconnectReason + " : " + e.WebsocketDisconnectionInfo.Exception.ToString());
+                }
+                catch (Exception ex)
+                {
+                    Log("obs_onDisconnect error: " + ex.Message);
+                }
+            }
+            
             Dispatcher.BeginInvoke(new Action(() => {
                 ConnectOBS.IsEnabled = true;
                 DisconnectOBS.IsEnabled = false;
