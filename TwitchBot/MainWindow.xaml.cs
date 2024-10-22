@@ -31,6 +31,7 @@ using TwitchLib.Api.Helix.Models.Moderation.GetModerators;
 using TwitchLib.Api.Helix.Models.Moderation.GetBannedUsers;
 using System.Runtime.InteropServices;
 using System.Security.Policy;
+using TwitchLib.Api.Helix.Models.Streams.CreateStreamMarker;
 
 
 //Base functionality taken from HonestDanGames' Youtube channel https://youtu.be/Ufgq6_QhVKw?si=QYBbDl0sYVCy3QVF
@@ -49,13 +50,11 @@ using System.Security.Policy;
 //look into TUNA plugin
 //instead of pulling from spotify API directly, possibly look into Windows' global media player info. Aka see if windows is playing a
 //song/video/thing and get info from there
+//maybe just use the integrated sound alerts spotify widget
 
 //maybe put in timed messages (eg: after 30 min shout out socials and following)
 
 //maybe put in automatic discord messaging? (eg: hey i'm live messages)
-
-
-
 
 
 //TTS REDEEM: look into role filtering for custom talking head images
@@ -64,9 +63,7 @@ using System.Security.Policy;
 //potentially have the skip (or other state changes of TTS) bound to global hotkey button like what's done in death counter program
 //manual skip button implemented. still undecided on spam filter
 
-
-//elden ring death counter. maybe automatic? (tie into elden ting itself instead of relying on chat commands)
-//maybe save death counter between app instances by reading from file
+//could be fun to have a twitch extension (or simply apply based on role of user) to add a border or effect to talking head
 
 
 //look into purposefully making jarbled sound alert sounds. current theory is running obs websocket through port 4455 conflicts with sound alerts
@@ -78,9 +75,26 @@ using System.Security.Policy;
 //look into feature that allows user to add static chat commands during run time
 //(would probably need to implement a dictionary stored in a text file. key<string> = chat command [!command]   value<string> = static string to write to chat log)
 
+
 //see if toggling enabled points redeems is possible
 
+
 //look into only connecting to obs websocket when needed (maybe to avoid borking sound alerts????)
+
+
+//possibly provide functionality for pressing a key/key combo to put a marker in current twitch stream
+/*
+    CreateStreamMarkerRequest markerRequest = new CreateStreamMarkerRequest();
+    markerRequest.UserId = TwitchChannelId;
+
+    TheTwitchAPI.Helix.Streams.CreateStreamMarkerAsync(markerRequest);
+*/
+
+
+//tts talking head isn't woriking
+//"TtsRedeem Error: One or more errors occurred. (Your request was blocked due to bad credentials (Do you have the right scope for your access token?).)"
+//maybe put in button or keyboard hotkey to force get new access token
+
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
 {
@@ -228,16 +242,9 @@ namespace TwitchBot
             SpeechSynthPauseResume.IsEnabled = false;
             SpeechSynthClearAllPrompts.IsEnabled = false;
             twitchPlaysButton.IsEnabled = false;
-        }
+            CheckCurrentAccessToken.IsEnabled = false;
 
-        //NOT CURRENTLY USED
-        private async void yetToBeFilledButton_Click(object sender, RoutedEventArgs e)
-        {
-            //await InitializeSpotifyAPI();
-
-            //RefreshAuthToken();
-
-
+            TestButton.IsEnabled = false;
         }
 
         //NOT CURRENTLY USED
@@ -300,9 +307,8 @@ namespace TwitchBot
             */
 
 
+            /*
             string url = "https://www.youtube.com/";
-
-
             try
             {
                 string _systemRoot = Environment.GetEnvironmentVariable("SYSTEMROOT");
@@ -329,34 +335,9 @@ namespace TwitchBot
             {
                 Log("Test Button Error: " + ex.Message);
             }
-
-            /*
-            try
-            {
-                Process.Start(url);
-            }
-            catch
-            {
-                // hack because of this: https://github.com/dotnet/corefx/issues/10361
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    url = url.Replace("&", "^&");
-                    Process.Start(new ProcessStartInfo("cmd", $"/c start {url}") { CreateNoWindow = true });
-                }
-                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                {
-                    Process.Start("xdg-open", url);
-                }
-                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                {
-                    Process.Start("open", url);
-                }
-                else
-                {
-                    throw;
-                }
-            }
             */
+
+            TheTwitchAPI.Settings.AccessToken = "0";
 
         }
 
@@ -465,6 +446,11 @@ namespace TwitchBot
             }
         }
 
+        private void CheckAccessTokenMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            ManualCheckAccessToken();
+        }
+
         private void CloseMenuItem_Click(object sender, RoutedEventArgs e)
         {
             CloseEverything();
@@ -522,8 +508,10 @@ namespace TwitchBot
             SpeechSynthPauseResume.Header = "_Pause TTS";
             SpeechSynthClearAllPrompts.IsEnabled = true;
 
+            CheckCurrentAccessToken.IsEnabled = true;
+
             //testing button
-            yetToBeFilledButton.IsEnabled = true;
+            TestButton.IsEnabled = true;
         }
 
         void initializeWebServer()
@@ -706,7 +694,7 @@ namespace TwitchBot
             Log($"OnLog: {e.Data}");
         }
 
-        private void Bot_OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)
+        async private void Bot_OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)
         {
             string commandText = e.Command.CommandText.ToLower();
             //2 ways to deal with commands: if/switch statements OR dictionary lookups
@@ -718,8 +706,6 @@ namespace TwitchBot
             //responses are added to dictionary in lowercase
             if (CommandsStaticResponses.ContainsKey(commandText))
             {
-                CheckAccessToken();
-
                 OwnerOfChannelConnection.SendMessage(TwitchChannelName, CommandsStaticResponses[commandText]);
             }
             //
@@ -732,8 +718,6 @@ namespace TwitchBot
                 //Tells user how to use commands
                 if (commandText.Equals("help"))
                 {
-                    CheckAccessToken();
-
                     List<string> test = e.Command.ArgumentsAsList;
 
                     if (e.Command.ArgumentsAsList.Count == 0)
@@ -778,8 +762,6 @@ namespace TwitchBot
                 //roll a random dX sided die
                 if (commandText.Contains("roll", StringComparison.OrdinalIgnoreCase) && e.Command.ArgumentsAsList.Count >= 1)
                 {
-                    CheckAccessToken();
-
                     try
                     {
                         //retrieve and split roll command into 2 segments: *number of dice* and *size of die*
@@ -845,8 +827,6 @@ namespace TwitchBot
                 //Grab random fact from https://api-ninjas.com/
                 if (commandText.Equals("fact"))
                 {
-                    CheckAccessToken();
-
                     new Thread(APINinjaGetFact).Start();
                 }
                 //
@@ -855,8 +835,6 @@ namespace TwitchBot
                 //Grab random dad joke from https://api-ninjas.com/
                 if (commandText.Equals("joke"))
                 {
-                    CheckAccessToken();
-
                     new Thread(APINinjaGetDadJoke).Start();
                 }
                 //
@@ -879,7 +857,7 @@ namespace TwitchBot
                         //1 in 10 chance 
                         if (random.Next(1, 11) == 1)
                         {
-                            CheckAccessToken();
+                            await CheckAccessToken();
 
                             bool isMod = false;
                             if(e.Command.ChatMessage.IsModerator)
@@ -1058,7 +1036,6 @@ namespace TwitchBot
                     break;
 
                 case "tts (normal speech rate)":
-                    //ttsRedeem(e);
                     ttsRedeem(e, SpeechSynthesis.SPEECHSYNTH_RATE);
                     break;
             }
@@ -1229,7 +1206,7 @@ namespace TwitchBot
         }
 
         //Handles TTS points redeems and enabling OBS talking head if available
-        private void ttsRedeem(OnChannelPointsRewardRedeemedArgs e, int speechRate)
+        async private void ttsRedeem(OnChannelPointsRewardRedeemedArgs e, int speechRate)
         {
 
             if (obs.IsConnected)
@@ -1244,7 +1221,7 @@ namespace TwitchBot
                 {
                     try
                     {
-                        CheckAccessToken();
+                        await CheckAccessToken();
 
                         //Log("TTS Talking Head Source Found");
 
@@ -1297,14 +1274,14 @@ namespace TwitchBot
         }
 
         //Write ad break starting message, wait for however long the current ad break is, and send an ad break ending message
-        private void OnCommercial_NewThread(object sender, OnCommercialArgs e)
+        async private void OnCommercial_NewThread(object sender, OnCommercialArgs e)
         {
             int commercialBreakLength = e.Length;
             int threadSleepLength = commercialBreakLength * 1000;
 
             Log("PubSub_OnCommercial: Ads started at " + e.ServerTime + " for " + commercialBreakLength + " seconds");
 
-            CheckAccessToken();
+            await CheckAccessToken();
 
             if (commercialBreakLength >= 60)
             {
@@ -1379,35 +1356,75 @@ namespace TwitchBot
             }
         }
 
-        //used to simplify previous code
-        private void CheckAccessToken()
+        //Checks current access token. If invalid then get new Access Token
+        async private Task CheckAccessToken()
         {
-            if(TheTwitchAPI.Auth.ValidateAccessTokenAsync == null)
-                RefreshAuthToken();
+            //Log("Checking AccessToken...");
+
+            var tokenResponse = TheTwitchAPI.Auth.ValidateAccessTokenAsync();
+            ValidateAccessTokenResponse tokenResult = await tokenResponse;
+
+            //tokenResult is null if current Access Token is invalid
+            //added ExpiresIn case to allow for the code needing an access token to fully execute
+            if (tokenResult == null || tokenResult.ExpiresIn <= 10)
+            {
+                Log("CheckAccessToken: Bad token, refreshing");
+
+                try
+                {
+                    var result = TheTwitchAPI.Auth.RefreshAuthTokenAsync(CachedRefreshToken, ClientSecret); //start the process of refreshing tokens
+                    RefreshResponse response = await result;    //retreive the results of token refresh
+
+                    //Log($"Old Access: {TheTwitchAPI.Settings.AccessToken}\t\tOld Refresh: {CachedRefreshToken}");
+
+                    CachedOwnerOfChannelAccessToken = response.AccessToken;
+                    TheTwitchAPI.Settings.AccessToken = response.AccessToken;
+
+                    CachedRefreshToken = response.RefreshToken;
+
+                    //Log($"New AccessToken: {TheTwitchAPI.Settings.AccessToken}\t\tNew Refresh: {CachedRefreshToken}");
+                }
+                catch (Exception except)
+                {
+                    Log($"CheckAuthToken Error: {except.Message}");
+                }
+            }
         }
 
-        //only use this method reactively when methods spit out an Error 401 Unauthorized result
-        //(not recommended to rely upon the expires_in variable twitch gives)
-        private async void RefreshAuthToken()
+        //Manually triggered variant of CheckAccessToken()
+        async private Task ManualCheckAccessToken()
         {
-            try
+            Log("Checking AccessToken...");
+
+            var tokenResponse = TheTwitchAPI.Auth.ValidateAccessTokenAsync();
+            ValidateAccessTokenResponse tokenResult = await tokenResponse;
+
+            //tokenResult is null if current Access Token is invalid
+            if (tokenResult == null)
             {
-                var result = TheTwitchAPI.Auth.RefreshAuthTokenAsync(CachedRefreshToken, ClientSecret); //start the process of refreshing tokens
-                RefreshResponse response = await result;    //retreive the results of token refresh
+                Log("CheckAccessToken: Bad token, refreshing");
 
-                Log($"Old Access: {TheTwitchAPI.Settings.AccessToken}\t\tOld Refresh: {CachedRefreshToken}");
+                try
+                {
+                    var result = TheTwitchAPI.Auth.RefreshAuthTokenAsync(CachedRefreshToken, ClientSecret); //start the process of refreshing tokens
+                    RefreshResponse response = await result;    //retreive the results of token refresh
 
-                CachedOwnerOfChannelAccessToken = response.AccessToken;
-                TheTwitchAPI.Settings.AccessToken = response.AccessToken;
+                    //Log($"Old Access: {TheTwitchAPI.Settings.AccessToken}\t\tOld Refresh: {CachedRefreshToken}");
 
-                CachedRefreshToken = response.RefreshToken;
+                    CachedOwnerOfChannelAccessToken = response.AccessToken;
+                    TheTwitchAPI.Settings.AccessToken = response.AccessToken;
 
-                Log($"New Access: {TheTwitchAPI.Settings.AccessToken}\t\tNew Refresh: {CachedRefreshToken}");
+                    CachedRefreshToken = response.RefreshToken;
+
+                    //Log($"New AccessToken: {TheTwitchAPI.Settings.AccessToken}\t\tNew Refresh: {CachedRefreshToken}");
+                }
+                catch (Exception except)
+                {
+                    Log($"CheckAuthToken Error: {except.Message}");
+                }
             }
-            catch (Exception except)
-            {
-                Log($"RefreshAuthToken Error: {except.Message}");
-            }
+            else
+                Log($"Current access token is valid");
         }
 
         async private void ReinstateModRole(string userIdToMod, string username, int banLength)

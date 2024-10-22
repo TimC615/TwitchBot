@@ -27,6 +27,9 @@
                     <Separator></Separator>
                     <MenuItem Name="SpeechSynthClearAllPrompts" Header="_Clear TTS Queue" HorizontalAlignment="Left" Width="200" IsEnabled="False" Click="ClearAllTTSPromptsMenuItem_Click"/>
                 </MenuItem>
+                <MenuItem Header="_Advanced" Click="MenuItem_Click">
+                    <MenuItem Name="CheckCurrentAccessToken" Header="_Check Access Token" HorizontalAlignment="Left" Width="200" IsEnabled="False" Click="CheckAccessTokenMenuItem_Click"/>
+                </MenuItem>
             </Menu>
 
             <TextBox Name="ConsoleLog" HorizontalAlignment="Left" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="540" Height="301" x:FieldModifier="public" Margin="10,20,10,0" IsReadOnly="True" VerticalScrollBarVisibility="Auto"/>
@@ -34,8 +37,9 @@
             <StackPanel Orientation="Horizontal" Margin="0,15,0,0">
                 <!-- Button Name="twitchPlaysButtontest" Content="Start Twtich Plays" HorizontalAlignment="Left" Margin="30,0,0,0" VerticalAlignment="Center" Height="38" Width="144" IsEnabled="False" Click="TwitchPlaysButton_Click"/-->
                 <Button x:Name="SkipCurrentTTSButton" Content="Skip Current TTS" Margin="30,0,0,0" VerticalAlignment="Center" Height="38" Width="115" Click="SkipCurrentTTS_Click" IsEnabled="false"/>
-                <Button x:Name="yetToBeFilledButton" Content="Test Refresh" Margin="15,0,0,0" VerticalAlignment="Center" Height="38" Width="86" IsEnabled="False" Click="yetToBeFilledButton_Click"/>
-                <Button x:Name="TestButton" Content="Launch Url" Margin="15,0,0,0" VerticalAlignment="Center" Height="38" Width="80" IsEnabled="True" Click="TestButton_Click"/>
+                <Button x:Name="TestButton" Margin="15,0,0,0" VerticalAlignment="Center" Height="38" Width="97" IsEnabled="False" Click="TestButton_Click">
+                    <TextBlock Text="Invalidate AccessToken" TextWrapping="Wrap" TextAlignment="Center"></TextBlock>
+                </Button>
                 <Button x:Name="TestModButton" Content="Test Mod" Margin="15,0,0,0" VerticalAlignment="Center" Height="38" Width="66" IsEnabled="False" Click="TestModButton_Click"/>
                 <Button x:Name="TestUnmodButton" Content="Test UnMod" Margin="15,0,0,0" VerticalAlignment="Center" Height="38" Width="77" IsEnabled="False" Click="TestUnmodButton_Click"/>
             </StackPanel>
