@@ -40,7 +40,10 @@
 
             <StackPanel Orientation="Horizontal" Margin="0,15,0,0">
                 <!-- Button Name="twitchPlaysButtontest" Content="Start Twtich Plays" HorizontalAlignment="Left" Margin="30,0,0,0" VerticalAlignment="Center" Height="38" Width="144" IsEnabled="False" Click="TwitchPlaysButton_Click"/-->
-                <Button x:Name="SkipCurrentTTSButton" Content="Skip Current TTS" Margin="30,0,0,0" VerticalAlignment="Center" Height="38" Width="115" Click="SkipCurrentTTS_Click" IsEnabled="false"/>
+                <Button x:Name="SkipCurrentTTSButton" Content="Skip Current TTS" Margin="15,0,0,0" VerticalAlignment="Center" Height="38" Width="115" Click="SkipCurrentTTS_Click" IsEnabled="false"/>
+                <Button x:Name="CreateStreamMarkerButton" Margin="15,0,0,0" VerticalAlignment="Center" Height="38" Width="102" Click="CreateStreamMarker_Click" IsEnabled="false">
+                    <TextBlock Text="Create Stream Marker" TextWrapping="Wrap" TextAlignment="Center"></TextBlock>
+                </Button>
                 <Button x:Name="TestButton" Margin="15,0,0,0" VerticalAlignment="Center" Height="38" Width="97" IsEnabled="False" Click="TestButton_Click">
                     <TextBlock Text="Invalidate AccessToken" TextWrapping="Wrap" TextAlignment="Center"></TextBlock>
                 </Button>

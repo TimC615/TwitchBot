@@ -33,6 +33,7 @@ using System.Runtime.InteropServices;
 using System.Security.Policy;
 using TwitchLib.Api.Helix.Models.Streams.CreateStreamMarker;
 using OBSWebsocketDotNet.Communication;
+using TwitchLib.Api.Helix.Models.Streams.GetStreams;
 
 
 //Base functionality taken from HonestDanGames' Youtube channel https://youtu.be/Ufgq6_QhVKw?si=QYBbDl0sYVCy3QVF
@@ -91,10 +92,10 @@ using OBSWebsocketDotNet.Communication;
     TheTwitchAPI.Helix.Streams.CreateStreamMarkerAsync(markerRequest);
 */
 
+//confetti/other celebration for 1st redeem
+//tiny confetti/other silly celebration for not 1st redeem
 
-//tts talking head isn't woriking
-//"TtsRedeem Error: One or more errors occurred. (Your request was blocked due to bad credentials (Do you have the right scope for your access token?).)"
-//maybe put in button or keyboard hotkey to force get new access token
+//make method to swap raw Twitch API time code into actually readable date/time combos
 
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
@@ -126,13 +127,13 @@ namespace TwitchBot
         private static readonly int TIMEOUTROULETTELENGTH = 30;      //timeout length, in seconds
 
         //API Ninja
-        private static HttpClient ninjaAPIConnection { get; set; }
+        private static HttpClient NinjaAPIConnection { get; set; }
 
         //OBS Websocket
         protected OBSWebsocket obs;
         private string ttsSceneName;
         private SceneItemDetails ttsSceneItem;
-        private string TTSTalkingHeadName = "TTS Talking Head";
+        private readonly string TTSTalkingHeadName = "TTS Talking Head";
 
 
 
@@ -256,17 +257,17 @@ namespace TwitchBot
         private void PauseResumeTTSMenuItem_Click(object sender, RoutedEventArgs e)
         {
 
-            if (!SpeechSynthObj.asyncIsPaused)
-            {
-                SpeechSynthObj.PauseSpeechSynthAsync();
-                SpeechSynthPauseResume.Header = "_Resume TTS";
-                Log($"\nTTS has been paused\n");
-            }
-            else
+            if (SpeechSynthObj.asyncIsPaused)
             {
                 SpeechSynthObj.ResumeSpeechSynthAsync();
                 SpeechSynthPauseResume.Header = "_Pause TTS";
                 Log($"\nTTS has been resumed\n");
+            }
+            else
+            {
+                SpeechSynthObj.PauseSpeechSynthAsync();
+                SpeechSynthPauseResume.Header = "_Resume TTS";
+                Log($"\nTTS has been paused\n");
             }
         }
 
@@ -277,7 +278,7 @@ namespace TwitchBot
 
         private void ConnectOBSMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            initializeOBSWebSocket();
+            InitializeOBSWebSocket();
         }
 
         private void DisconnectOBSMenuItem_Click(object sender, RoutedEventArgs e)
@@ -286,6 +287,16 @@ namespace TwitchBot
             {
                 obs.Disconnect();
             }
+        }
+
+        private async void CreateStreamMarker_Click(object sender, RoutedEventArgs e)
+        {
+            await CheckAccessToken();
+
+            CreateStreamMarkerRequest markerRequest = new CreateStreamMarkerRequest();
+            markerRequest.UserId = TwitchChannelId;
+
+            TheTwitchAPI.Helix.Streams.CreateStreamMarkerAsync(markerRequest);
         }
 
         async private void TestButton_Click(object sender, RoutedEventArgs e)
@@ -481,7 +492,7 @@ namespace TwitchBot
 
         void StartBot()
         {
-            initializeWebServer();
+            InitializeWebServer();
 
             //var authUrl = $"https://id.twitch.tv/oauth2/authorize?response_type=code&client_id={{ClientId}}&redirect_uri={{RedirectUri}}&scope={{String.Join("+", Scopes)}}";
             var authUrl = "https://id.twitch.tv/oauth2/authorize?response_type=code&client_id=" +
@@ -522,7 +533,7 @@ namespace TwitchBot
             TestButton.IsEnabled = true;
         }
 
-        void initializeWebServer()
+        void InitializeWebServer()
         {
             //Create local web server (allows for requesting OAUTH token)
             WebServer = new HttpServer();
@@ -541,7 +552,7 @@ namespace TwitchBot
                     {
                         //initialize base TwitchLib API
                         var code = e.Request.QueryString["code"];
-                        var ownerOfChannelAccessAndRefresh = await getAccessAndRefreshTokens(code);
+                        var ownerOfChannelAccessAndRefresh = await GetAccessAndRefreshTokens(code);
 
                         CachedOwnerOfChannelAccessToken = ownerOfChannelAccessAndRefresh.Item1; //access token
                         CachedRefreshToken = ownerOfChannelAccessAndRefresh.Item2; //refresh token
@@ -552,10 +563,10 @@ namespace TwitchBot
 
 
                         //initialize connection to facts api
-                        initializeNinjaAPI();
+                        InitializeNinjaAPI();
 
                         //initialize connection to OBS websocket
-                        initializeOBSWebSocket();
+                        InitializeOBSWebSocket();
 
                         //initialize Twitch points redeem API
                         InitializeTwitchLibPubSub();
@@ -581,7 +592,7 @@ namespace TwitchBot
             TwitchChannelName = oauthedUser.Users[0].Login;
         }
 
-        async Task<Tuple<String, String>> getAccessAndRefreshTokens(string code)
+        async Task<Tuple<String, String>> GetAccessAndRefreshTokens(string code)
         {
             HttpClient client = new HttpClient();
             var values = new Dictionary<string, String>
@@ -658,21 +669,21 @@ namespace TwitchBot
             PubSub.Connect();
         }
 
-        void initializeNinjaAPI()
+        void InitializeNinjaAPI()
         {
-            ninjaAPIConnection = new HttpClient();
-            ninjaAPIConnection.BaseAddress = new Uri("https://api.api-ninjas.com/v1/");
+            NinjaAPIConnection = new HttpClient();
+            NinjaAPIConnection.BaseAddress = new Uri("https://api.api-ninjas.com/v1/");
             //requires an API key to be added to requests but will be handled during actual GET requests
 
             //ninjaAPIConnection.BaseAddress = new Uri("https://jsonplaceholder.typicode.com/");
         }
 
-        void initializeOBSWebSocket()
+        void InitializeOBSWebSocket()
         {
             obs = new OBSWebsocket();
 
-            obs.Connected += obs_onConnect;
-            obs.Disconnected += obs_onDisconnect;
+            obs.Connected += Obs_onConnect;
+            obs.Disconnected += Obs_onDisconnect;
 
             //setting port to 4455 conflicts with Sound Alerts. creates jarbled mess of the incoming sound bites
             obs.ConnectAsync("ws://192.168.2.22:49152", Properties.Settings.Default.OBSWebSocketAuth);
@@ -705,6 +716,7 @@ namespace TwitchBot
         async private void Bot_OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)
         {
             string commandText = e.Command.CommandText.ToLower();
+
             //2 ways to deal with commands: if/switch statements OR dictionary lookups
 
             //
@@ -712,9 +724,9 @@ namespace TwitchBot
             //
 
             //responses are added to dictionary in lowercase
-            if (CommandsStaticResponses.ContainsKey(commandText))
+            if (CommandsStaticResponses.TryGetValue(commandText, out string? value))
             {
-                OwnerOfChannelConnection.SendMessage(TwitchChannelName, CommandsStaticResponses[commandText]);
+                OwnerOfChannelConnection.SendMessage(TwitchChannelName, value);
             }
             //
             //---------------------------------------------------------------------------------------------------------------------
@@ -778,7 +790,7 @@ namespace TwitchBot
                         string rollInput = rollCommand[0].ToLower();
                         string[] rollParams;
 
-                        if (!rollInput.Contains("d"))
+                        if (!rollInput.Contains('d'))
                         {
                             rollParams = ["1", rollInput];
                         }
@@ -1040,11 +1052,11 @@ namespace TwitchBot
                     Random random = new Random();
                     int randRate = random.Next(1, 21) - 10;
 
-                    ttsRedeem(e, randRate);
+                    TtsRedeem(e, randRate);
                     break;
 
                 case "tts (normal speech rate)":
-                    ttsRedeem(e, SpeechSynthesis.SPEECHSYNTH_RATE);
+                    TtsRedeem(e, SpeechSynthesis.SPEECHSYNTH_RATE);
                     break;
             }
         }
@@ -1064,7 +1076,7 @@ namespace TwitchBot
         //
         //----------------------OBS Event Hookups----------------------
         //
-        private void obs_onConnect(object sender, EventArgs e)
+        private void Obs_onConnect(object sender, EventArgs e)
         {
             Log("OBS connected");
             obsConnected = true;
@@ -1075,7 +1087,7 @@ namespace TwitchBot
             }));
         }
 
-        private void obs_onDisconnect(object sender, OBSWebsocketDotNet.Communication.ObsDisconnectionInfo e)
+        private void Obs_onDisconnect(object sender, OBSWebsocketDotNet.Communication.ObsDisconnectionInfo e)
         {
             //Allows for more descriptive error message in cases where OBS isn't running. Normally would output "Unknown reason"
             if (Process.GetProcessesByName("obs64").Length == 0)
@@ -1233,7 +1245,7 @@ namespace TwitchBot
         }
 
         //Handles TTS points redeems and enabling OBS talking head if available
-        async private void ttsRedeem(OnChannelPointsRewardRedeemedArgs e, int speechRate)
+        async private void TtsRedeem(OnChannelPointsRewardRedeemedArgs e, int speechRate)
         {
 
             if (obs.IsConnected)
@@ -1334,7 +1346,7 @@ namespace TwitchBot
             {
                 //no need to add a limit since default is already 1
                 string apiUrl = "facts?X-Api-Key=" + Properties.Settings.Default.APINinjaKey;
-                var response = await ninjaAPIConnection.GetAsync(apiUrl);
+                var response = await NinjaAPIConnection.GetAsync(apiUrl);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -1362,7 +1374,7 @@ namespace TwitchBot
             {
                 //no need to add a limit since default is already 1
                 string apiUrl = "dadjokes?X-Api-Key=" + Properties.Settings.Default.APINinjaKey;
-                var response = await ninjaAPIConnection.GetAsync(apiUrl);
+                var response = await NinjaAPIConnection.GetAsync(apiUrl);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -1471,7 +1483,7 @@ namespace TwitchBot
                 if (modsResult.Data.Length > 0)
                     Log($"Mod Role reinstated for: {modsResult.Data[0].UserName}");
                 else
-                    throw new Exception("Unable to restore mod role for: {modsResult.Data[0].UserName}");
+                    throw new Exception("Unable to restore mod role for: " + username);
             }
             catch (Exception except)
             {
@@ -1544,9 +1556,9 @@ namespace TwitchBot
                 PubSub.Disconnect();
             }
 
-            if (ninjaAPIConnection != null)
+            if (NinjaAPIConnection != null)
             {
-                ninjaAPIConnection.Dispose();
+                NinjaAPIConnection.Dispose();
             }
 
             if (obs != null)
