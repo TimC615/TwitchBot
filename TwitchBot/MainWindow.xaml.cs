@@ -95,8 +95,6 @@ using TwitchLib.Api.Helix.Models.Streams.GetStreams;
 //confetti/other celebration for 1st redeem
 //tiny confetti/other silly celebration for not 1st redeem
 
-//make method to swap raw Twitch API time code into actually readable date/time combos
-
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
 {
@@ -301,63 +299,19 @@ namespace TwitchBot
 
         async private void TestButton_Click(object sender, RoutedEventArgs e)
         {
-            /*
-            try
-            {
-                List<string> testSearchUsers = new List<string>();
-                testSearchUsers.Add("cakebot___");
 
-                GetUsersResponse usersResult = await TheTwitchAPI.Helix.Users.GetUsersAsync(null, testSearchUsers);
-                Log($"{usersResult.Users[0].Login} -> {usersResult.Users[0].Id}");
-
-                List<string> testSearchMods = new List<string>();
-                testSearchMods.Add(usersResult.Users[0].Id);
-                GetModeratorsResponse modsResult = await TheTwitchAPI.Helix.Moderation.GetModeratorsAsync(TwitchChannelId, testSearchMods);
-
-                if (modsResult.Data.Length > 0)
-                    Log($"{modsResult.Data[0].UserName} is a mod");
-                else
-                    Log($"{usersResult.Users[0].Login} is NOT a mod");
-            }
-            catch(Exception ex)
-            {
-                Log($"TestButton Error: {ex.Message}");
-            }
-            */
+            Log("This is a test");
+            Log($"{DateTime.Now.TimeOfDay.Hours}:{DateTime.Now.TimeOfDay.Minutes}:{DateTime.Now.TimeOfDay.Seconds}");
+            Log($"{DateTime.Now.ToString("MMM")} {DateTime.Now.Day} {DateTime.Now.Year}   {DateTime.Now.TimeOfDay.Hours}:{DateTime.Now.TimeOfDay.Minutes}:{DateTime.Now.TimeOfDay.Seconds}");
 
 
-            /*
-            string url = "https://www.youtube.com/";
-            try
-            {
-                string _systemRoot = Environment.GetEnvironmentVariable("SYSTEMROOT");
-                Log("SystemRoot: " + _systemRoot);
+            CreateStreamMarkerRequest test = new CreateStreamMarkerRequest();
 
-                //Process.Start("chrome.exe", url);
+            CreateStreamMarkerRequest markerRequest = new CreateStreamMarkerRequest();
+            markerRequest.UserId = TwitchChannelId;
+            markerRequest.Description = "Marker created through bot app";
 
-                //Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
-
-                ProcessStartInfo testPSI = new ProcessStartInfo()
-                {
-                    UseShellExecute = true,
-                    //FileName = url,
-                    FileName = url
-                    //WorkingDirectory = _systemRoot
-                };
-                //testPSI.Arguments = "MainWindow.xaml.cs";
-
-                Log("WorkingDirectory: " + testPSI.WorkingDirectory);
-
-                Process.Start(testPSI);
-            }
-            catch (Exception ex)
-            {
-                Log("Test Button Error: " + ex.Message);
-            }
-            */
-
-            TheTwitchAPI.Settings.AccessToken = "0";
-
+            TheTwitchAPI.Helix.Streams.CreateStreamMarkerAsync(markerRequest);
         }
 
         async private void TestModButton_Click(object sender, RoutedEventArgs e)
@@ -1198,7 +1152,7 @@ namespace TwitchBot
         public void Log(string printMessage)
         {
             Action writeToConsoleLog = () => {
-                ConsoleLog.AppendText("\n" + printMessage);
+                ConsoleLog.AppendText("\n" + DateTime.Now.ToString() + "\t" + printMessage);
                 ConsoleLog.ScrollToEnd();
             };
 
@@ -1206,7 +1160,7 @@ namespace TwitchBot
 
             //not using Console.WriteLine() as WPF doesn't have a console window
             //writes to 'Output' window during debug instead
-            Trace.WriteLine(printMessage);
+            Trace.WriteLine(DateTime.Now.ToString() + "\t" + printMessage);
         }
 
         //Triggers a countdown to begin before the Twitch Plays portion of code activates
@@ -1318,7 +1272,7 @@ namespace TwitchBot
             int commercialBreakLength = e.Length;
             int threadSleepLength = commercialBreakLength * 1000;
 
-            Log("PubSub_OnCommercial: Ads started at " + e.ServerTime + " for " + commercialBreakLength + " seconds");
+            Log("PubSub_OnCommercial: Ads started for " + commercialBreakLength + " seconds");
 
             await CheckAccessToken();
 
