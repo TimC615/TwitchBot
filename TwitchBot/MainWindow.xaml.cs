@@ -17,8 +17,6 @@ using Newtonsoft.Json;
 using OBSWebsocketDotNet;
 using TwitchLib.Communication.Interfaces;
 using System;
-using SpotifyAPI.Web;
-using SpotifyAPI.Web.Auth;
 using OBSWebsocketDotNet.Types;
 using TwitchLib.Client.Extensions;
 using TwitchLib.Api.Helix.Models.Moderation.BanUser;
@@ -47,13 +45,6 @@ using TwitchLib.Api.Helix.Models.Streams.GetStreams;
 
 
 //---------------------------------------------------------------------------------------------------------------------------
-//Add in spotify "now playing" info in the corner of OBS (maybe youtube info also if possible?)
-//if using specifically spotify api, can add in points redeem for users to add requested song to queue
-//look into TUNA plugin
-//instead of pulling from spotify API directly, possibly look into Windows' global media player info. Aka see if windows is playing a
-//song/video/thing and get info from there
-//maybe just use the integrated sound alerts spotify widget
-
 //maybe put in timed messages (eg: after 30 min shout out socials and following)
 
 //maybe put in automatic discord messaging? (eg: hey i'm live messages)
@@ -140,17 +131,6 @@ namespace TwitchBot
         private string ttsSceneName;
         private SceneItemDetails ttsSceneItem;
         private readonly string TTSTalkingHeadName = "TTS Talking Head";
-
-
-
-        //Spotify API (Experimental)
-        //private static HttpClient spotifyAPIConnection { get; set; }
-        //private SpotifyClientConfig spotifyClientConfig { get; set; }
-        protected static SpotifyClient spotify;
-        protected static string spotifyAccessToken;
-        private static EmbedIOAuthServer _server;
-
-
 
         //Cached Variables
         private string CachedOwnerOfChannelAccessToken = "needsaccesstoken"; //cached due to potentially being needed for API requests
@@ -1166,76 +1146,6 @@ namespace TwitchBot
         }
         //
         //----------------------End of OBS Event Hookups----------------------
-        //
-
-        //
-        //----------------------Experimental Spotify API Methods----------------------
-        //
-        /* Spotify API v1
-        void InitializeSpotifyAPI()
-        {
-            var loginRequest = new LoginRequest(
-                new Uri("http://localhost:3000"),
-                Properties.Settings.Default.SpotifyClientId,
-                LoginRequest.ResponseType.Code)
-            {
-                Scope = new[] { Scopes.PlaylistReadPrivate, Scopes.PlaylistReadCollaborative }
-            };
-            var uri = loginRequest.ToUri;
-        }
-        */
-
-        public static async Task InitializeSpotifyAPI()
-        {
-            // Make sure "http://localhost:5543/callback" is in your spotify application as redirect uri!
-            _server = new EmbedIOAuthServer(new Uri("http://localhost:5543/callback"), 5543);
-            await _server.Start();
-
-            _server.AuthorizationCodeReceived += OnAuthorizationCodeReceived;
-            _server.ErrorReceived += OnErrorReceived;
-
-            var request = new LoginRequest(_server.BaseUri, "ClientId", LoginRequest.ResponseType.Code)
-            {
-                //Scope = new List<string> { "Scopes.UserReadEmail" }
-                //Scope = new List<string> { "Scopes.UserReadEmail" }
-            };
-            BrowserUtil.Open(request.ToUri());
-        }
-
-        private static async Task OnAuthorizationCodeReceived(object sender, AuthorizationCodeResponse response)
-        {
-            await _server.Stop();
-
-            var config = SpotifyClientConfig.CreateDefault();
-            var tokenResponse = await new OAuthClient(config).RequestToken(
-                new AuthorizationCodeTokenRequest(
-                    Properties.Settings.Default.SpotifyClientId,
-                    Properties.Settings.Default.SpotifyClientSecret,
-                    response.Code,
-                    new Uri("http://localhost:5543/callback")
-                )
-            );
-
-            spotifyAccessToken = tokenResponse.AccessToken;
-            spotify = new SpotifyClient(spotifyAccessToken);
-            // do calls with Spotify and save token?
-
-            var track = await spotify.Tracks.Get("1s6ux0lNiTziSrd7iUAADH");
-            Console.WriteLine(track.Name);
-        }
-
-        private static async Task OnErrorReceived(object sender, string error, string state)
-        {
-            Console.WriteLine($"Aborting authorization, error received: {error}");
-            await _server.Stop();
-        }
-
-        private void SetSpotifyAccessToken(string token)
-        {
-            spotifyAccessToken = token;
-        }
-        //
-        //----------------------End of Experimental Spotify API Methods----------------------
         //
 
         //
