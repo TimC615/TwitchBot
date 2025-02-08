@@ -93,6 +93,19 @@ using TwitchLib.Api.Helix.Models.Streams.GetStreams;
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
 {
+    //used in displaying the chat command to show timeout roulette leaderboard
+    public class RouletteLeaderboardPosition
+    {
+        public string username;
+        public int spinCount;
+
+        public RouletteLeaderboardPosition(string username, int spinCount)
+        {
+            this.username = username;
+            this.spinCount = spinCount;
+        }
+    }
+
     public partial class MainWindow : Window
     {
         //Authentication
@@ -118,6 +131,7 @@ namespace TwitchBot
         private TwitchAPI TheTwitchAPI;
         private TwitchPubSub PubSub;
         private static readonly int TIMEOUTROULETTELENGTH = 30;      //timeout length, in seconds
+        private static readonly int TIMEOUTROULETTETOPPOSITIONSTODISPLAY = 3;   //used to determine max number of results to show for leaderboard display
         
         private Dictionary<string, int> rouletteLeaderboard;
 
@@ -854,12 +868,8 @@ namespace TwitchBot
                             if (rouletteLeaderboard.ContainsKey(e.Command.ChatMessage.Username))
                             {
                                 leaderboardSpins = rouletteLeaderboard[e.Command.ChatMessage.Username];
-                                rouletteLeaderboard[e.Command.ChatMessage.Username] = 0;
+                                rouletteLeaderboard.Remove(e.Command.ChatMessage.Username);
                             }
-                            else
-                                rouletteLeaderboard.Add(e.Command.ChatMessage.Username, 0);
-
-
 
                             string timeoutRouletteMessage = $"Congrats {e.Command.ChatMessage.DisplayName}! You won the roulette and timed yourself out after surviving {leaderboardSpins} spins!";
                             OwnerOfChannelConnection.SendReply(TwitchChannelName, 
@@ -923,21 +933,31 @@ namespace TwitchBot
                 {
                     var topGroups = rouletteLeaderboard.OrderByDescending(x => x.Value).GroupBy(x => x.Value).Take(3);
 
-                    string leaderboardOutput = $"The most spins without a timeout are: ";
-                    foreach(var topGroup in topGroups)
+                    List<RouletteLeaderboardPosition> topLeaderboardSpots = GetTopRouletteLeaderboardPositions(rouletteLeaderboard);
+
+                    if(topLeaderboardSpots.Count == 0)
                     {
-                        foreach(var topPair in topGroup)
-                        {
-                            if(topPair.Value != 0)
-                                leaderboardOutput += $"{topPair.Key} with {topPair.Value} spins, ";
-                        }
-                    }
-
-                    leaderboardOutput = leaderboardOutput.Remove(leaderboardOutput.LastIndexOf(","), 1);
-
-                    OwnerOfChannelConnection.SendReply(TwitchChannelName,
+                        OwnerOfChannelConnection.SendReply(TwitchChannelName,
                         e.Command.ChatMessage.Id,
-                        leaderboardOutput);
+                        "There are currently no people listed on the timeout roulette leaderboard. Make sure to have at least 1 spin without being timed out to show up here!");
+                    }
+                    else
+                    {
+                        string leaderboardOutput = $"The most spins without a timeout are: ";
+                        foreach (var topSpot in topLeaderboardSpots)
+                        {
+                            if(topSpot.spinCount == 1)
+                                leaderboardOutput += $" {topSpot.username} with {topSpot.spinCount} spin,";
+                            else
+                                leaderboardOutput += $" {topSpot.username} with {topSpot.spinCount} spins,";
+                        }
+
+                        leaderboardOutput = leaderboardOutput.Remove(leaderboardOutput.LastIndexOf(","), 1);
+
+                        OwnerOfChannelConnection.SendReply(TwitchChannelName,
+                            e.Command.ChatMessage.Id,
+                            leaderboardOutput);
+                    }
                 }
                 //
                 //------------------------------------------------------------------------------------------------------------------
@@ -1484,6 +1504,29 @@ namespace TwitchBot
             System.IO.File.WriteAllText(ROULETTEJSONFILENAME, rouletteJson);
         }
 
+        //returns a list of the top X people in timeout roulette leaderboard
+        public List<RouletteLeaderboardPosition> GetTopRouletteLeaderboardPositions(Dictionary<string, int> leaderboard)
+        {
+            List<RouletteLeaderboardPosition> topPositions = new List<RouletteLeaderboardPosition>();
+
+            var topGroups = rouletteLeaderboard.OrderByDescending(x => x.Value).GroupBy(x => x.Value).Take(TIMEOUTROULETTETOPPOSITIONSTODISPLAY);
+
+            foreach (var topGroup in topGroups)
+            {
+                foreach (var topPair in topGroup)
+                {
+                    if(topPositions.Count != TIMEOUTROULETTETOPPOSITIONSTODISPLAY && topPair.Value != 0)
+                    {
+                        RouletteLeaderboardPosition currPosition = new RouletteLeaderboardPosition(topPair.Key, topPair.Value);
+                        topPositions.Add(currPosition);
+                    }
+                    else
+                        return topPositions;
+                }
+            }
+
+            return topPositions;
+        }
 
         //Handles the disabling of talking head image in OBS after TTS points redeem events are called
         public void CloseTTSFace()
