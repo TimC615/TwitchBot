@@ -7,12 +7,10 @@ using TwitchLib.Api;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
-using TwitchLib.PubSub;
 using System.IO;
 using System.Diagnostics;
 using System.Windows.Threading;
 using WindowsInput;
-using TwitchLib.PubSub.Events;
 using Newtonsoft.Json;
 using OBSWebsocketDotNet;
 using TwitchLib.Communication.Interfaces;
@@ -33,6 +31,13 @@ using TwitchLib.Api.Helix.Models.Streams.CreateStreamMarker;
 using OBSWebsocketDotNet.Communication;
 using TwitchLib.Api.Helix.Models.Streams.GetStreams;
 
+
+using TwitchLib.EventSub;
+using TwitchLib.PubSub.Events;
+using TwitchLib.PubSub;
+using TwitchLib.EventSub.Websockets;
+using TwitchLib.EventSub.Websockets.Core.EventArgs.Channel;
+using TwitchLib.EventSub.Websockets.Core.EventArgs;
 
 //Base functionality taken from HonestDanGames' Youtube channel https://youtu.be/Ufgq6_QhVKw?si=QYBbDl0sYVCy3QVF
 //Provides networking functionality to connect program to Twitch, beginner understanding of setting up API event handlers,
@@ -80,15 +85,18 @@ using TwitchLib.Api.Helix.Models.Streams.GetStreams;
     CreateStreamMarkerRequest markerRequest = new CreateStreamMarkerRequest();
     markerRequest.UserId = TwitchChannelId;
 
-    TheTwitchAPI.Helix.Streams.CreateStreamMarkerAsync(markerRequest);
+    _TwitchAPI.Helix.Streams.CreateStreamMarkerAsync(markerRequest);
 */
 
 //confetti/other celebration for 1st redeem
 //tiny confetti/other silly celebration for not 1st redeem
 
 
-//roulette leaderboard for who spin the most without timeout
-//or simply "you spun and avoided the timeout X times in a row"
+
+//Connect EventSub events to corresponding points redeems and ad breaks
+//Move handling of chat commands, points redeems, and ad breaks to new classes to clean up code
+//Link the starting of EventSub websocket code to user pressing "start bot" WPF button
+//Make it so that EventSub console messages are posted to WPF as well
 
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
@@ -117,19 +125,21 @@ namespace TwitchBot
         { "user:edit", "chat:read", "chat:edit", "channel:moderate", "bits:read",
             "channel:read:subscriptions", "user:read:email", "user:read:subscriptions", "channel:manage:redemptions",
             "channel:edit:commercial", "channel:manage:ads", "user:read:email", "moderator:manage:banned_users",
-            "moderation:read", "channel:manage:moderators"
-        };
-        //find more Twitch API scopes at https://dev.twitch.tv/docs/authentication/scopes/
+            "moderation:read", "channel:read:ads", "channel:manage:moderators"
+        };      //find more Twitch API scopes at https://dev.twitch.tv/docs/authentication/scopes/
 
-        //, "channel:edit:commercial" //using with WitchLib.PubSub (points redeems) and users triggering ad breaks
+
 
         //WPF
         Settings settings;
 
         //TwitchLib
-        private TwitchClient OwnerOfChannelConnection;
-        private TwitchAPI TheTwitchAPI;
+        private TwitchClient _TwitchClient;
+        private TwitchAPI _TwitchAPI;
         private TwitchPubSub PubSub;
+        private EventSubWebsocketClient EventSub;
+        //Look for EventSub events in "WebsocketHostedServices.cs". Handles things like points redeems and ad break triggers.
+
         private static readonly int TIMEOUTROULETTELENGTH = 30;      //timeout length, in seconds
         private static readonly int TIMEOUTROULETTETOPPOSITIONSTODISPLAY = 3;   //used to determine max number of results to show for leaderboard display
         
@@ -156,10 +166,9 @@ namespace TwitchBot
         private bool twitchPlaysEnable = false;
         private bool obsConnected = false;
 
-        //Global objects
+        //Other Objects
         TwitchPlays TwitchPlaysObj;    //only gets an object when TwitchPlays is enabled
-        InputSimulator inSim = new InputSimulator();
-        SpeechSynthesis SpeechSynthObj = new SpeechSynthesis();
+        SpeechSynthesis _SpeechSynth;
 
         //Bot Commands
         readonly Dictionary<string, string> CommandsStaticResponses = new Dictionary<string, string>
@@ -185,7 +194,6 @@ namespace TwitchBot
             SystemParameters.StaticPropertyChanged += (sender, e) => { setAlignmentValue(); };
 
         }
-
 
 
         //
@@ -251,21 +259,21 @@ namespace TwitchBot
 
         private void SkipCurrentTTS_Click(object sender, RoutedEventArgs e)
         {
-            SpeechSynthObj.SkipCurrentSpeechSynthAsync();
+            _SpeechSynth.SkipCurrentSpeechSynthAsync();
         }
 
         private void PauseResumeTTSMenuItem_Click(object sender, RoutedEventArgs e)
         {
 
-            if (SpeechSynthObj.asyncIsPaused)
+            if (_SpeechSynth.asyncIsPaused)
             {
-                SpeechSynthObj.ResumeSpeechSynthAsync();
+                _SpeechSynth.ResumeSpeechSynthAsync();
                 SpeechSynthPauseResume.Header = "_Pause TTS";
                 Log($"\nTTS has been resumed\n");
             }
             else
             {
-                SpeechSynthObj.PauseSpeechSynthAsync();
+                _SpeechSynth.PauseSpeechSynthAsync();
                 SpeechSynthPauseResume.Header = "_Resume TTS";
                 Log($"\nTTS has been paused\n");
             }
@@ -273,7 +281,7 @@ namespace TwitchBot
 
         private void ClearAllTTSPromptsMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            SpeechSynthObj.ClearAllSpeechSynthAsyncPrompts();
+            _SpeechSynth.ClearAllSpeechSynthAsyncPrompts();
         }
 
         private void ConnectOBSMenuItem_Click(object sender, RoutedEventArgs e)
@@ -296,12 +304,12 @@ namespace TwitchBot
             CreateStreamMarkerRequest markerRequest = new CreateStreamMarkerRequest();
             markerRequest.UserId = TwitchChannelId;
 
-            TheTwitchAPI.Helix.Streams.CreateStreamMarkerAsync(markerRequest);
+            _TwitchAPI.Helix.Streams.CreateStreamMarkerAsync(markerRequest);
         }
 
         async private void TestButton_Click(object sender, RoutedEventArgs e)
         {
-
+            /*
             Log("This is a test");
             Log($"{DateTime.Now.TimeOfDay.Hours}:{DateTime.Now.TimeOfDay.Minutes}:{DateTime.Now.TimeOfDay.Seconds}");
             Log($"{DateTime.Now.ToString("MMM")} {DateTime.Now.Day} {DateTime.Now.Year}   {DateTime.Now.TimeOfDay.Hours}:{DateTime.Now.TimeOfDay.Minutes}:{DateTime.Now.TimeOfDay.Seconds}");
@@ -313,7 +321,10 @@ namespace TwitchBot
             markerRequest.UserId = TwitchChannelId;
             markerRequest.Description = "Marker created through bot app";
 
-            TheTwitchAPI.Helix.Streams.CreateStreamMarkerAsync(markerRequest);
+            _TwitchAPI.Helix.Streams.CreateStreamMarkerAsync(markerRequest);
+            */
+
+            Log($"TEST - {_TwitchAPI.Settings.ClientId} vs {Properties.Settings.Default.clientid}");
         }
 
         async private void TestModButton_Click(object sender, RoutedEventArgs e)
@@ -323,12 +334,12 @@ namespace TwitchBot
                 List<string> testSearchUsers = new List<string>();
                 testSearchUsers.Add("cakebot___");
 
-                GetUsersResponse usersResult = await TheTwitchAPI.Helix.Users.GetUsersAsync(null, testSearchUsers);
+                GetUsersResponse usersResult = await _TwitchAPI.Helix.Users.GetUsersAsync(null, testSearchUsers);
                 Log($"{usersResult.Users[0].Login} -> {usersResult.Users[0].Id}");
 
                 List<string> testSearchMods = new List<string>();
                 testSearchMods.Add(usersResult.Users[0].Id);
-                GetModeratorsResponse modsResult = await TheTwitchAPI.Helix.Moderation.GetModeratorsAsync(TwitchChannelId);
+                GetModeratorsResponse modsResult = await _TwitchAPI.Helix.Moderation.GetModeratorsAsync(TwitchChannelId);
 
                 string output = "";
 
@@ -341,11 +352,11 @@ namespace TwitchBot
                 }
                 Log($"Mods: {output}");
 
-                await TheTwitchAPI.Helix.Moderation.UnbanUserAsync(TwitchChannelId, TwitchChannelId, usersResult.Users[0].Id);
+                await _TwitchAPI.Helix.Moderation.UnbanUserAsync(TwitchChannelId, TwitchChannelId, usersResult.Users[0].Id);
 
-                await TheTwitchAPI.Helix.Moderation.AddChannelModeratorAsync(TwitchChannelId, usersResult.Users[0].Id);
+                await _TwitchAPI.Helix.Moderation.AddChannelModeratorAsync(TwitchChannelId, usersResult.Users[0].Id);
 
-                GetModeratorsResponse modsResult2 = await TheTwitchAPI.Helix.Moderation.GetModeratorsAsync(TwitchChannelId);
+                GetModeratorsResponse modsResult2 = await _TwitchAPI.Helix.Moderation.GetModeratorsAsync(TwitchChannelId);
 
                 output = "";
 
@@ -371,12 +382,12 @@ namespace TwitchBot
                 List<string> testSearchUsers = new List<string>();
                 testSearchUsers.Add("cakebot___");
 
-                GetUsersResponse usersResult = await TheTwitchAPI.Helix.Users.GetUsersAsync(null, testSearchUsers);
+                GetUsersResponse usersResult = await _TwitchAPI.Helix.Users.GetUsersAsync(null, testSearchUsers);
                 Log($"{usersResult.Users[0].Login} -> {usersResult.Users[0].Id}");
 
                 List<string> testSearchMods = new List<string>();
                 testSearchMods.Add(usersResult.Users[0].Id);
-                GetModeratorsResponse modsResult = await TheTwitchAPI.Helix.Moderation.GetModeratorsAsync(TwitchChannelId);
+                GetModeratorsResponse modsResult = await _TwitchAPI.Helix.Moderation.GetModeratorsAsync(TwitchChannelId);
 
                 string output = "";
 
@@ -397,13 +408,13 @@ namespace TwitchBot
                 request.Duration = 20;
 
                 //add specific channel and acting moderator info to current user ban info
-                BanUserResponse result = TheTwitchAPI.Helix.Moderation.BanUserAsync(
+                BanUserResponse result = _TwitchAPI.Helix.Moderation.BanUserAsync(
                     TwitchChannelId,
                     TwitchChannelId,
                     request
                     ).Result;
 
-                GetBannedUsersResponse bannedResult = await TheTwitchAPI.Helix.Moderation.GetBannedUsersAsync(TwitchChannelId, testSearchMods);
+                GetBannedUsersResponse bannedResult = await _TwitchAPI.Helix.Moderation.GetBannedUsersAsync(TwitchChannelId, testSearchMods);
                 output = "";
 
                 foreach (var entry in bannedResult.Data)
@@ -514,7 +525,7 @@ namespace TwitchBot
                         CachedRefreshToken = ownerOfChannelAccessAndRefresh.Item2; //refresh token
 
                         SetNameAndIdByOauthedUser(CachedOwnerOfChannelAccessToken).Wait();
-                        InitializeOwnerOfChannelConnection(TwitchChannelName, CachedOwnerOfChannelAccessToken);
+                        InitializeTwitchClient(TwitchChannelName, CachedOwnerOfChannelAccessToken);
                         InitializeTwitchAPI(CachedOwnerOfChannelAccessToken);
 
 
@@ -536,6 +547,9 @@ namespace TwitchBot
             WebServer.Start();
             Log($"Web server started on: {WebServer.EndPoint}");
 
+            _SpeechSynth = new SpeechSynthesis();
+            GlobalObjects.botIsActive = true;
+
             System.Media.SoundPlayer botStartup = new System.Media.SoundPlayer("C:\\Users\\timot\\source\\repos\\TwitchBot\\Bot startup sound.wav");
             botStartup.Play();
         }
@@ -548,6 +562,9 @@ namespace TwitchBot
 
             var oauthedUser = await api.Helix.Users.GetUsersAsync();
             TwitchChannelId = oauthedUser.Users[0].Id;
+
+            GlobalObjects.TwitchBroadcasterUserId = oauthedUser.Users[0].Id;
+
             TwitchChannelName = oauthedUser.Users[0].Login;
         }
 
@@ -576,37 +593,37 @@ namespace TwitchBot
 
         void InitializeTwitchAPI(string accessToken)
         {
-            TheTwitchAPI = new TwitchAPI();
-            TheTwitchAPI.Settings.ClientId = ClientId;
-            TheTwitchAPI.Settings.AccessToken = accessToken;
-            TheTwitchAPI.Settings.Secret = ClientSecret;
+            _TwitchAPI = GlobalObjects._TwitchAPI;
+            _TwitchAPI.Settings.ClientId = ClientId;
+            _TwitchAPI.Settings.AccessToken = accessToken;
+            _TwitchAPI.Settings.Secret = ClientSecret;
         }
 
-        void InitializeOwnerOfChannelConnection(string username, string accessToken)
+        void InitializeTwitchClient(string username, string accessToken)
         {
-            OwnerOfChannelConnection = new TwitchClient();
-            OwnerOfChannelConnection.Initialize(new ConnectionCredentials(username, accessToken), TwitchChannelName);
+            _TwitchClient = new TwitchClient();
+            _TwitchClient.Initialize(new ConnectionCredentials(username, accessToken), TwitchChannelName);
 
             //Events you want to subscribe to
-            OwnerOfChannelConnection.OnConnected += Client_OnConnected;
-            OwnerOfChannelConnection.OnDisconnected += OwnerOfChannelConnection_OnDisconnected;
-            //OwnerOfChannelConnection.OnLog += OwnerOfChannelConnection_OnLog; //good for debug
-            OwnerOfChannelConnection.OnChatCommandReceived += Bot_OnChatCommandReceived;
-            OwnerOfChannelConnection.OnMessageReceived += Client_OnMessageReceived;
-
+            _TwitchClient.OnConnected += Client_OnConnected;
+            _TwitchClient.OnDisconnected += TwitchClient_OnDisconnected;
+            //_TwitchClient.OnLog += TwitchClient_OnLog; //good for debug
+            _TwitchClient.OnChatCommandReceived += Bot_OnChatCommandReceived;
+            _TwitchClient.OnMessageReceived += Client_OnMessageReceived;
+            _TwitchClient.OnRateLimit += TwitchClient_OnRateLimit;
 
             //Other subscription examples
-            //OwnerOfChannelConnection.OnBanned += Client_OnBanned;
-            //OwnerOfChannelConnection.OnUserTimedout += Client_OnUserTimedout;
-            //OwnerOfChannelConnection.OnJoinedChannel += Client_OnJoinedChannel;
-            //OwnerOfChannelConnection.OnUserJoined += BotConnection_OnUserJoined;
-            //OwnerOfChannelConnection.OnUserLeft += BotConnection_OnUserLeft;
-            //OwnerOfChannelConnection.OnWhisperReceived += Client_OnWhisperReceived;
-            //OwnerOfChannelConnection.OnNewSubscriber += Client_OnNewSubscriber;
-            //OwnerOfChannelConnection.OnIncorrectLogin += Client_OnIncorrectLogin;
-            //OwnerOfChannelConnection.OnWhisperCommandReceived += Bot_OnWhisperCommandReceived;
+            //_TwitchClient.OnBanned += Client_OnBanned;
+            //_TwitchClient.OnUserTimedout += Client_OnUserTimedout;
+            //_TwitchClient.OnJoinedChannel += Client_OnJoinedChannel;
+            //_TwitchClient.OnUserJoined += BotConnection_OnUserJoined;
+            //_TwitchClient.OnUserLeft += BotConnection_OnUserLeft;
+            //_TwitchClient.OnWhisperReceived += Client_OnWhisperReceived;
+            //_TwitchClient.OnNewSubscriber += Client_OnNewSubscriber;
+            //_TwitchClient.OnIncorrectLogin += Client_OnIncorrectLogin;
+            //_TwitchClient.OnWhisperCommandReceived += Bot_OnWhisperCommandReceived;
 
-            OwnerOfChannelConnection.Connect();
+            _TwitchClient.Connect();
         }
         
         void InitializeTwitchLibPubSub()
@@ -626,6 +643,25 @@ namespace TwitchBot
             //PubSub.ListenToBitsEventsV2(TwitchChannelId);
 
             PubSub.Connect();
+        }
+
+        void InitializeTwitchLibEventSub()
+        {
+            //EventSub = new EventSubWebsocketClient();
+
+            //EventSub.WebsocketConnected += EventSub_WebsocketConnected;
+            //EventSub.WebsocketDisconnected += EventSub_WebsocketDisconnected;
+            //EventSub.WebsocketReconnected += EventSub_WebsocketReconnected;
+            //EventSub.ErrorOccurred += EventSub_ErrorOccurred;
+
+            //EventSub.UserUpdate += EventSub_UserUpdate;
+
+            //EventSub.ChannelAdBreakBegin += EventSub_ChannelAdBreakBegin;
+            //EventSub.ChannelPointsCustomRewardRedemptionAdd += EventSub_ChannelPointsCustomRewardRedemptionAdd;
+            //EventSub.ChannelPointsCustomRewardRedemptionUpdate += EventSub_ChannelPointsCustomRewardRedemptionUpdate;
+
+
+            //EventSub.ConnectAsync();
         }
 
         void InitializeNinjaAPI()
@@ -662,14 +698,19 @@ namespace TwitchBot
             Log($"User {e.BotUsername} connected (bot access)");
         }
 
-        private void OwnerOfChannelConnection_OnDisconnected(object sender, TwitchLib.Communication.Events.OnDisconnectedEventArgs e)
+        private void TwitchClient_OnDisconnected(object sender, TwitchLib.Communication.Events.OnDisconnectedEventArgs e)
         {
             Log($"OwnerOfChannel OnDisconnected event");
         }
 
-        private void OwnerOfChannelConnection_OnLog(object sender, TwitchLib.Client.Events.OnLogArgs e)
+        private void TwitchClient_OnLog(object sender, TwitchLib.Client.Events.OnLogArgs e)
         {
             Log($"OnLog: {e.Data}");
+        }
+
+        private void TwitchClient_OnRateLimit(object sender, OnRateLimitArgs e)
+        {
+            Log($"OnRateLimit - Channel:{e.Channel}\tMessage: {e.Message}");
         }
 
         async private void Bot_OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)
@@ -685,7 +726,7 @@ namespace TwitchBot
             //responses are added to dictionary in lowercase
             if (CommandsStaticResponses.TryGetValue(commandText, out string? value))
             {
-                OwnerOfChannelConnection.SendReply(TwitchChannelName,
+                _TwitchClient.SendReply(TwitchChannelName,
                     e.Command.ChatMessage.Id,
                     value);
             }
@@ -702,7 +743,7 @@ namespace TwitchBot
                     List<string> test = e.Command.ArgumentsAsList;
 
                     if (e.Command.ArgumentsAsList.Count == 0)
-                        OwnerOfChannelConnection.SendReply(TwitchChannelName,
+                        _TwitchClient.SendReply(TwitchChannelName,
                             e.Command.ChatMessage.Id,
                             "Type \"!help <command>\" to see how you can use it (E.g. !help roll)");
                     else
@@ -719,22 +760,22 @@ namespace TwitchBot
                                 case "lurk":
                                 case "fact":
                                 case "joke":
-                                    OwnerOfChannelConnection.SendReply(TwitchChannelName,
+                                    _TwitchClient.SendReply(TwitchChannelName,
                                         e.Command.ChatMessage.Id,
                                         "Enter \"!" + helpSpecifier + "\" and I'll do all the rest");
                                     break;
                                 case "roll":
-                                    OwnerOfChannelConnection.SendReply(TwitchChannelName,
+                                    _TwitchClient.SendReply(TwitchChannelName,
                                         e.Command.ChatMessage.Id,
                                         "Enter \"!roll d<number of sides>\" to roll a single die or \"!roll <number of dice>d<number of sides>\" to roll multiple dice! (e.g. !roll d6) or !roll 3d20");
                                     break;
                                 case "roulette":
-                                    OwnerOfChannelConnection.SendReply(TwitchChannelName,
+                                    _TwitchClient.SendReply(TwitchChannelName,
                                         e.Command.ChatMessage.Id,
                                         "Enter \"!roulette\" for a chance to time yourself out for " + TIMEOUTROULETTELENGTH + " seconds");
                                     break;
                                 case "rouletteleaderboard":
-                                    OwnerOfChannelConnection.SendReply(TwitchChannelName,
+                                    _TwitchClient.SendReply(TwitchChannelName,
                                         e.Command.ChatMessage.Id,
                                         "Enter \"!rouletteleaderboard\" to see who has survived the most spins on the timeout roulette wheel!");
                                     break;
@@ -787,7 +828,7 @@ namespace TwitchBot
                         catch (Exception ex)
                         {
                             Log("Roll command error converting param 0: " + ex.Message);
-                            OwnerOfChannelConnection.SendReply(TwitchChannelName,
+                            _TwitchClient.SendReply(TwitchChannelName,
                                 e.Command.ChatMessage.Id,
                                 "The number of dice to roll needs to be a whole number greater than or equal to 1");
                             diceToRoll = -1;
@@ -800,7 +841,7 @@ namespace TwitchBot
                             {
                                 long sizeOfDie = Int64.Parse(rollParams[1]);
                                 if (sizeOfDie <= 1)
-                                    OwnerOfChannelConnection.SendReply(TwitchChannelName,
+                                    _TwitchClient.SendReply(TwitchChannelName,
                                         e.Command.ChatMessage.Id,
                                         "The size of the die to roll needs to be a whole number greater than 1");
                                 else
@@ -847,7 +888,7 @@ namespace TwitchBot
 
                         if (e.Command.ChatMessage.IsMe || e.Command.ChatMessage.IsBroadcaster || e.Command.ChatMessage.IsStaff)
                         {
-                            OwnerOfChannelConnection.SendReply(TwitchChannelName,
+                            _TwitchClient.SendReply(TwitchChannelName,
                                 e.Command.ChatMessage.Id,
                                 $"Sorry {e.Command.ChatMessage.Username}, you're not able to be timed out so you can't spin the roulette");
                             throw new Exception("User tried to timeout as restricted role");
@@ -872,7 +913,7 @@ namespace TwitchBot
                             }
 
                             string timeoutRouletteMessage = $"Congrats {e.Command.ChatMessage.DisplayName}! You won the roulette and timed yourself out after surviving {leaderboardSpins} spins!";
-                            OwnerOfChannelConnection.SendReply(TwitchChannelName, 
+                            _TwitchClient.SendReply(TwitchChannelName, 
                                 e.Command.ChatMessage.Id, 
                                 timeoutRouletteMessage);
 
@@ -883,7 +924,7 @@ namespace TwitchBot
                             request.Duration = TIMEOUTROULETTELENGTH;
 
                             //add specific channel and acting moderator info to current user ban info
-                            BanUserResponse result = TheTwitchAPI.Helix.Moderation.BanUserAsync(
+                            BanUserResponse result = _TwitchAPI.Helix.Moderation.BanUserAsync(
                                 TwitchChannelId,
                                 TwitchChannelId,
                                 request
@@ -913,7 +954,7 @@ namespace TwitchBot
                             int rouletteLeaderboardCount = rouletteLeaderboard[e.Command.ChatMessage.Username];
 
 
-                            OwnerOfChannelConnection.SendReply(TwitchChannelName, 
+                            _TwitchClient.SendReply(TwitchChannelName, 
                                 e.Command.ChatMessage.Id,
                                 $"{e.Command.ChatMessage.DisplayName} has survived the timeout roulette {rouletteLeaderboardCount} time(s)");
                             
@@ -937,7 +978,7 @@ namespace TwitchBot
 
                     if(topLeaderboardSpots.Count == 0)
                     {
-                        OwnerOfChannelConnection.SendReply(TwitchChannelName,
+                        _TwitchClient.SendReply(TwitchChannelName,
                         e.Command.ChatMessage.Id,
                         "There are currently no people listed on the timeout roulette leaderboard. Make sure to have at least 1 spin without being timed out to show up here!");
                     }
@@ -954,7 +995,7 @@ namespace TwitchBot
 
                         leaderboardOutput = leaderboardOutput.Remove(leaderboardOutput.LastIndexOf(","), 1);
 
-                        OwnerOfChannelConnection.SendReply(TwitchChannelName,
+                        _TwitchClient.SendReply(TwitchChannelName,
                             e.Command.ChatMessage.Id,
                             leaderboardOutput);
                     }
@@ -967,7 +1008,7 @@ namespace TwitchBot
                 {
                     string skyrimCommands = "You can mess with skyrim by saying any of the following: forward, back, stop, left, right, jump, " +
                         "cheese, soup, wine, potions, rabbits, skeevers, bears, lydia, spiders, dragons, cheesemageddon, and soupmageddon";
-                    OwnerOfChannelConnection.SendReply(TwitchChannelName, 
+                    _TwitchClient.SendReply(TwitchChannelName, 
                         e.Command.ChatMessage.Id,
                         skyrimCommands);
                 }
@@ -1119,6 +1160,27 @@ namespace TwitchBot
         //----------------------End of PubSub Event Hookups----------------------
         //
 
+        //
+        //----------------------EventSub Event Hookups----------------------
+        //
+        private void EventSub_WebsocketConnected(object sender, WebsocketConnectedArgs e)
+        {
+            Log($"EventSub websocket connected");
+        }
+
+        public void EventSub_WebsocketConnectedTEST()
+        {
+            Log($"EventSub websocket connected");
+        }
+
+        private void EventSub_WebsocketDisconnected(object sender, WebsocketDisconnectedArgs e)
+        {
+            Log($"EventSub websocket disconnected. Status: {e.CloseStatus}\tDesc:{e.CloseStatusDescription}");
+        }
+        //
+        //----------------------End of EventSub Event Hookups----------------------
+        //
+
 
         //
         //----------------------OBS Event Hookups----------------------
@@ -1218,7 +1280,7 @@ namespace TwitchBot
             System.Media.SoundPlayer twitchPlaysStartup = new System.Media.SoundPlayer("C:\\Users\\timot\\source\\repos\\TwitchBot\\Twitch Plays startup sound.wav");
             twitchPlaysStartup.Play();
 
-            SpeechSynthObj.SpeechSynth("Twitch Plays is now live");
+            _SpeechSynth.SpeechSynth("Twitch Plays is now live");
         }
 
         //Handles TTS points redeems and enabling OBS talking head if available
@@ -1247,7 +1309,7 @@ namespace TwitchBot
                         List<string> userSearch = new List<string>();
                         userSearch.Add(e.RewardRedeemed.Redemption.User.Login);
 
-                        var users = TheTwitchAPI.Helix.Users.GetUsersAsync(idSearch, userSearch);
+                        var users = _TwitchAPI.Helix.Users.GetUsersAsync(idSearch, userSearch);
                         string profileImageUrl = users.Result.Users[0].ProfileImageUrl;
 
                         InputSettings testInSet = obs.GetInputSettings("TTS Talking Head");
@@ -1259,7 +1321,7 @@ namespace TwitchBot
                         obs.SetSceneItemEnabled(ttsSceneName, ttsSceneItem.ItemId, true);
 
 
-                        SpeechSynthObj.SpeechSynthAsync(e.RewardRedeemed.Redemption.UserInput, speechRate);
+                        _SpeechSynth.SpeechSynthAsync(e.RewardRedeemed.Redemption.UserInput, speechRate);
 
                         CloseTTSFace();
                     }
@@ -1267,23 +1329,23 @@ namespace TwitchBot
                     {
                         Log($"TtsRedeem Error: {except.Message}");
 
-                        SpeechSynthObj.SpeechSynthAsync(e.RewardRedeemed.Redemption.UserInput, speechRate);
+                        _SpeechSynth.SpeechSynthAsync(e.RewardRedeemed.Redemption.UserInput, speechRate);
                     }
                 }
                 else
                 {
                     Log("TTS Talking Head Source not found in current OBS scene");
 
-                    SpeechSynthObj.SpeechSynthAsync(e.RewardRedeemed.Redemption.UserInput, speechRate);
+                    _SpeechSynth.SpeechSynthAsync(e.RewardRedeemed.Redemption.UserInput, speechRate);
                 }
             }
             else
             {
                 //trigger TTS without calling obs-related methods
                 if (speechRate == -100)
-                    SpeechSynthObj.SpeechSynthAsync(e.RewardRedeemed.Redemption.UserInput);
+                    _SpeechSynth.SpeechSynthAsync(e.RewardRedeemed.Redemption.UserInput);
                 else
-                    SpeechSynthObj.SpeechSynthAsync(e.RewardRedeemed.Redemption.UserInput, speechRate);
+                    _SpeechSynth.SpeechSynthAsync(e.RewardRedeemed.Redemption.UserInput, speechRate);
             }
 
 
@@ -1302,19 +1364,25 @@ namespace TwitchBot
             if (commercialBreakLength >= 60)
             {
                 double commercialBreakLengthMin = (double)commercialBreakLength / 60;
-                OwnerOfChannelConnection.SendMessage(TwitchChannelName, "Ads have started and will last for " + commercialBreakLengthMin
+                _TwitchClient.SendMessage(TwitchChannelName, "Ads have started and will last for " + commercialBreakLengthMin
                     + " minutes. Feel free to stretch a bit, hydrate, or just chill out in chat!");
             }
             else
             {
-                OwnerOfChannelConnection.SendMessage(TwitchChannelName, "Ads have started and will last for " + commercialBreakLength
+                _TwitchClient.SendMessage(TwitchChannelName, "Ads have started and will last for " + commercialBreakLength
                     + " seconds. Feel free to stretch a bit, hydrate, or just chill out in chat!");
             }
 
             Thread.Sleep(threadSleepLength);
             Log("PubSub_OnCommercial: Ads have finished");
-            //OwnerOfChannelConnection.SendMessage(TwitchChannelName, "Ad break is now done!");
+            //_TwitchClient.SendMessage(TwitchChannelName, "Ad break is now done!");
         }
+
+
+
+
+
+
 
         //Ping API Ninja for a fact and output to twitch chat
         async private void APINinjaGetFact()
@@ -1333,9 +1401,9 @@ namespace TwitchBot
                     //convert API call to array of objects. we only ever call 1 result from API so length will always be 1
                     APINinjaFacts[] result = JsonConvert.DeserializeObject<APINinjaFacts[]>(stringResponse);
 
-                    OwnerOfChannelConnection.SendMessage(TwitchChannelName, result[0].fact);
+                    _TwitchClient.SendMessage(TwitchChannelName, result[0].fact);
                     //TwitchPlays.SpeechSynthSync(result[0].fact);
-                    SpeechSynthObj.SpeechSynth(result[0].fact);
+                    _SpeechSynth.SpeechSynth(result[0].fact);
                 }
             }
             catch (Exception except)
@@ -1361,9 +1429,9 @@ namespace TwitchBot
                     //convert API call to array of objects. we only ever call 1 result from API so length will always be 1
                     APINinjaDadJokes[] result = JsonConvert.DeserializeObject<APINinjaDadJokes[]>(stringResponse);
 
-                    OwnerOfChannelConnection.SendMessage(TwitchChannelName, result[0].joke);
+                    _TwitchClient.SendMessage(TwitchChannelName, result[0].joke);
                     //TwitchPlays.SpeechSynthSync(result[0].joke);
-                    SpeechSynthObj.SpeechSynth(result[0].joke);
+                    _SpeechSynth.SpeechSynth(result[0].joke);
                 }
             }
             catch (Exception except)
@@ -1377,7 +1445,7 @@ namespace TwitchBot
         {
             //Log("Checking AccessToken...");
 
-            var tokenResponse = TheTwitchAPI.Auth.ValidateAccessTokenAsync();
+            var tokenResponse = _TwitchAPI.Auth.ValidateAccessTokenAsync();
             ValidateAccessTokenResponse tokenResult = await tokenResponse;
 
             //tokenResult is null if current Access Token is invalid
@@ -1388,17 +1456,17 @@ namespace TwitchBot
 
                 try
                 {
-                    var result = TheTwitchAPI.Auth.RefreshAuthTokenAsync(CachedRefreshToken, ClientSecret); //start the process of refreshing tokens
+                    var result = _TwitchAPI.Auth.RefreshAuthTokenAsync(CachedRefreshToken, ClientSecret); //start the process of refreshing tokens
                     RefreshResponse response = await result;    //retreive the results of token refresh
 
-                    //Log($"Old Access: {TheTwitchAPI.Settings.AccessToken}\t\tOld Refresh: {CachedRefreshToken}");
+                    //Log($"Old Access: {_TwitchAPI.Settings.AccessToken}\t\tOld Refresh: {CachedRefreshToken}");
 
                     CachedOwnerOfChannelAccessToken = response.AccessToken;
-                    TheTwitchAPI.Settings.AccessToken = response.AccessToken;
+                    _TwitchAPI.Settings.AccessToken = response.AccessToken;
 
                     CachedRefreshToken = response.RefreshToken;
 
-                    //Log($"New AccessToken: {TheTwitchAPI.Settings.AccessToken}\t\tNew Refresh: {CachedRefreshToken}");
+                    //Log($"New AccessToken: {_TwitchAPI.Settings.AccessToken}\t\tNew Refresh: {CachedRefreshToken}");
                 }
                 catch (Exception except)
                 {
@@ -1412,7 +1480,7 @@ namespace TwitchBot
         {
             Log("Checking AccessToken...");
 
-            var tokenResponse = TheTwitchAPI.Auth.ValidateAccessTokenAsync();
+            var tokenResponse = _TwitchAPI.Auth.ValidateAccessTokenAsync();
             ValidateAccessTokenResponse tokenResult = await tokenResponse;
 
             //tokenResult is null if current Access Token is invalid
@@ -1422,17 +1490,17 @@ namespace TwitchBot
 
                 try
                 {
-                    var result = TheTwitchAPI.Auth.RefreshAuthTokenAsync(CachedRefreshToken, ClientSecret); //start the process of refreshing tokens
+                    var result = _TwitchAPI.Auth.RefreshAuthTokenAsync(CachedRefreshToken, ClientSecret); //start the process of refreshing tokens
                     RefreshResponse response = await result;    //retreive the results of token refresh
 
-                    //Log($"Old Access: {TheTwitchAPI.Settings.AccessToken}\t\tOld Refresh: {CachedRefreshToken}");
+                    //Log($"Old Access: {_TwitchAPI.Settings.AccessToken}\t\tOld Refresh: {CachedRefreshToken}");
 
                     CachedOwnerOfChannelAccessToken = response.AccessToken;
-                    TheTwitchAPI.Settings.AccessToken = response.AccessToken;
+                    _TwitchAPI.Settings.AccessToken = response.AccessToken;
 
                     CachedRefreshToken = response.RefreshToken;
 
-                    //Log($"New AccessToken: {TheTwitchAPI.Settings.AccessToken}\t\tNew Refresh: {CachedRefreshToken}");
+                    //Log($"New AccessToken: {_TwitchAPI.Settings.AccessToken}\t\tNew Refresh: {CachedRefreshToken}");
                 }
                 catch (Exception except)
                 {
@@ -1451,12 +1519,12 @@ namespace TwitchBot
 
             try
             {
-                //OwnerOfChannelConnection.Mod(TwitchChannelName, userIdToMod);
-                await TheTwitchAPI.Helix.Moderation.AddChannelModeratorAsync(TwitchChannelId, userIdToMod);
+                //_TwitchClient.Mod(TwitchChannelName, userIdToMod);
+                await _TwitchAPI.Helix.Moderation.AddChannelModeratorAsync(TwitchChannelId, userIdToMod);
 
                 List<string> testSearchMods = new List<string>();
                 testSearchMods.Add(userIdToMod);
-                GetModeratorsResponse modsResult = await TheTwitchAPI.Helix.Moderation.GetModeratorsAsync(TwitchChannelId, testSearchMods);
+                GetModeratorsResponse modsResult = await _TwitchAPI.Helix.Moderation.GetModeratorsAsync(TwitchChannelId, testSearchMods);
 
                 if (modsResult.Data.Length > 0)
                     Log($"Mod Role reinstated for: {modsResult.Data[0].UserName}");
@@ -1537,7 +1605,7 @@ namespace TwitchBot
                 Thread.Sleep(100);
 
                 //check every 100ms if TTS is actively speaking. if finished speaking, disable TTS face
-                while (SpeechSynthObj.asyncSynth.State.ToString() == "Speaking")
+                while (_SpeechSynth.asyncSynth.State.ToString() == "Speaking")
                 {
                     Thread.Sleep(100);
                 }
@@ -1566,20 +1634,20 @@ namespace TwitchBot
 
             if (total == 1)
             {
-                OwnerOfChannelConnection.SendReply(TwitchChannelName, replyId, "You rolled: a nat 1! Good job!");
+                _TwitchClient.SendReply(TwitchChannelName, replyId, "You rolled: a nat 1! Good job!");
             }
             else
             {
-                OwnerOfChannelConnection.SendReply(TwitchChannelName, replyId, "You rolled: " + total);
+                _TwitchClient.SendReply(TwitchChannelName, replyId, "You rolled: " + total);
             }
 
         }
 
         void CloseEverything()
         {
-            if (OwnerOfChannelConnection != null)
+            if (_TwitchClient != null)
             {
-                OwnerOfChannelConnection.Disconnect();
+                _TwitchClient.Disconnect();
             }
 
             if (WebServer != null)
@@ -1591,6 +1659,11 @@ namespace TwitchBot
             if (PubSub != null)
             {
                 PubSub.Disconnect();
+            }
+
+            if (EventSub != null)
+            {
+                EventSub.DisconnectAsync();
             }
 
             if (NinjaAPIConnection != null)
@@ -1609,8 +1682,9 @@ namespace TwitchBot
             }
 
             //ensure tts queue is fully cleared (assuming user is just restarting/stopping bot instead of full shutdown)
-            SpeechSynthObj.ClearAllSpeechSynthAsyncPrompts();
-            SpeechSynthObj.ResumeSpeechSynthAsync();                //allows tts to function again if bot is stopping/restarting
+            _SpeechSynth.ClearAllSpeechSynthAsyncPrompts();
+
+            GlobalObjects.botIsActive = false;
 
             Log($"Bot connections closed");
         }

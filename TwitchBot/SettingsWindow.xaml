@@ -40,25 +40,10 @@
                         <TextBox Name="APINinjaKeyTextBox" TextWrapping="Wrap" Text="key" Width="307" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Expander>
-
-                <Separator Margin="10,5,10,5" Width="Auto"/>
-
-                <Expander Name="SpotifyExpander" Height="Auto" Header="Spotify [Experimental]" HorizontalAlignment="Left">
-                    <StackPanel Orientation="Vertical" Margin="30,0,0,0">
-                        <StackPanel Orientation="Horizontal">
-                            <Label Content="Spotify Client ID:" VerticalAlignment="Center"/>
-                            <TextBox Name="SpotifyClientIDTextBox" TextWrapping="Wrap" Text="client id" Width="218" VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal">
-                            <Label Content="Spotify Client Secret:" VerticalAlignment="Center"/>
-                            <TextBox Name="SpotifyClientSecretTextBox" TextWrapping="Wrap" Text="client seret" Width="218" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </StackPanel>
-                </Expander>
             </StackPanel>
         </ScrollViewer>
 
-        <Button Content="Save Changes" VerticalAlignment="Bottom" HorizontalAlignment="Right" Click="SaveChangesButton_OnClick" Margin="0,0,10,10"/>
+        <Button Content="Save Changes" VerticalAlignment="Bottom" HorizontalAlignment="Right" Click="SaveChangesButton_OnClick" Padding="4 2" Margin="0,0,10,10"/>
         
     </Grid>
 </Window>

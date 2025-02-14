@@ -1,5 +1,4 @@
-﻿using Swan;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -44,7 +43,7 @@ namespace TwitchBot
         private Queue<Prompt> currAsyncPromptQueue = new Queue<Prompt>();
 
         public SpeechSynthesis()
-        {
+        { 
             synth = new SpeechSynthesizer();
 
             asyncSynth = new SpeechSynthesizer();

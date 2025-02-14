@@ -33,9 +33,6 @@ namespace TwitchBot
             OBSWebSocketAuthTextBox.Text = Properties.Settings.Default.OBSWebSocketAuth;
 
             APINinjaKeyTextBox.Text = Properties.Settings.Default.APINinjaKey;
-
-            SpotifyClientIDTextBox.Text = Properties.Settings.Default.SpotifyClientId;
-            SpotifyClientSecretTextBox.Text = Properties.Settings.Default.SpotifyClientSecret;
         }
 
         private void SaveChangesButton_OnClick(object sender, RoutedEventArgs e)
@@ -75,9 +72,6 @@ namespace TwitchBot
                 Properties.Settings.Default.OBSWebSocketAuth = OBSWebSocketAuthTextBox.Text;
 
                 Properties.Settings.Default.APINinjaKey = APINinjaKeyTextBox.Text;
-
-                Properties.Settings.Default.SpotifyClientId = SpotifyClientIDTextBox.Text;
-                Properties.Settings.Default.SpotifyClientSecret = SpotifyClientSecretTextBox.Text;
 
                 Properties.Settings.Default.Save();
                 this.Close();

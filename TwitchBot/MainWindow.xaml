@@ -45,7 +45,7 @@
                     <TextBlock Text="Create Stream Marker" TextWrapping="Wrap" TextAlignment="Center"></TextBlock>
                 </Button>
                 <Button x:Name="TestButton" Margin="15,0,0,0" VerticalAlignment="Center" Height="38" Width="97" IsEnabled="True" Click="TestButton_Click">
-                    <TextBlock Text="Epoch to DateTime" TextWrapping="Wrap" TextAlignment="Center"></TextBlock>
+                    <TextBlock Text="Test ClientId Values" TextWrapping="Wrap" TextAlignment="Center"></TextBlock>
                 </Button>
                 <Button x:Name="TestModButton" Content="Test Mod" Margin="15,0,0,0" VerticalAlignment="Center" Height="38" Width="66" IsEnabled="False" Click="TestModButton_Click"/>
                 <Button x:Name="TestUnmodButton" Content="Test UnMod" Margin="15,0,0,0" VerticalAlignment="Center" Height="38" Width="77" IsEnabled="False" Click="TestUnmodButton_Click"/>
