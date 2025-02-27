@@ -33,6 +33,8 @@ namespace TwitchBot
 
     class SpeechSynthesis
     {
+        private static SpeechSynthesis Instance;
+
         static readonly int SPEECHSYNTH_VOL = 80;
         public static readonly int SPEECHSYNTH_RATE = 0;
         public SpeechSynthesizer synth;
@@ -42,13 +44,23 @@ namespace TwitchBot
 
         private Queue<Prompt> currAsyncPromptQueue = new Queue<Prompt>();
 
-        public SpeechSynthesis()
+        private SpeechSynthesis()
         { 
             synth = new SpeechSynthesizer();
 
             asyncSynth = new SpeechSynthesizer();
             asyncSynth.SpeakStarted += SpeechSynthAsyncPromptStart;
             asyncSynth.SpeakCompleted += SpeechSynthAsyncPromptEnd;
+        }
+
+        public static SpeechSynthesis GetInstance()
+        {
+            if (Instance == null)
+            {
+                Instance = new SpeechSynthesis();
+            }
+
+            return Instance;
         }
         
 

@@ -36,7 +36,7 @@
                 </MenuItem>
             </Menu>
 
-            <TextBox Name="ConsoleLog" HorizontalAlignment="Left" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="540" Height="301" x:FieldModifier="public" Margin="10,20,10,0" IsReadOnly="True" VerticalScrollBarVisibility="Auto"/>
+            <TextBox x:Name="ConsoleLog" HorizontalAlignment="Left" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="540" Height="301" x:FieldModifier="public" Margin="10,20,10,0" IsReadOnly="True" VerticalScrollBarVisibility="Auto"/>
 
             <StackPanel Orientation="Horizontal" Margin="0,15,0,0">
                 <!-- Button Name="twitchPlaysButtontest" Content="Start Twtich Plays" HorizontalAlignment="Left" Margin="30,0,0,0" VerticalAlignment="Center" Height="38" Width="144" IsEnabled="False" Click="TwitchPlaysButton_Click"/-->

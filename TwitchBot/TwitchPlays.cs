@@ -24,7 +24,7 @@ namespace TwitchBot
         //SimulateKeyPress SimKeyPress = new SimulateKeyPress();
         InputSimulator inputSim = new InputSimulator();
 
-        public SpeechSynthesis synth = new SpeechSynthesis();
+        public SpeechSynthesis synth = SpeechSynthesis.GetInstance();
 
         [DllImport("User32.dll")]
         static extern int SetForegroundWindow(IntPtr point);
@@ -216,7 +216,8 @@ namespace TwitchBot
                         {
                             //call TTS method like this to allow for speach overlap (normally waits for the previous message to finish before the next starts)
                             new Thread(delegate () {
-                                SpeechSynthesis skyrimTTS = new SpeechSynthesis();
+                                //SpeechSynthesis skyrimTTS = new SpeechSynthesis();
+                                SpeechSynthesis skyrimTTS = SpeechSynthesis.GetInstance();
 
                                 skyrimTTS.SpeechSynth("spawning cheese");
                             }).Start();
@@ -230,7 +231,7 @@ namespace TwitchBot
                         if (random.Next(1, 4) == 1)
                         {
                             new Thread(delegate () {
-                                SpeechSynthesis skyrimTTS = new SpeechSynthesis();
+                                SpeechSynthesis skyrimTTS = SpeechSynthesis.GetInstance();
 
                                 skyrimTTS.SpeechSynth("spawning soup");
                             }).Start();
@@ -244,7 +245,7 @@ namespace TwitchBot
                         if (random.Next(1, 4) == 1)
                         {
                             new Thread(delegate () {
-                                SpeechSynthesis skyrimTTS = new SpeechSynthesis();
+                                SpeechSynthesis skyrimTTS = SpeechSynthesis.GetInstance();
 
                                 skyrimTTS.SpeechSynth("spawning wine");
                             }).Start();
@@ -259,7 +260,7 @@ namespace TwitchBot
                         if (random.Next(1, 6) == 1)
                         {
                             new Thread(delegate () {
-                                SpeechSynthesis skyrimTTS = new SpeechSynthesis();
+                                SpeechSynthesis skyrimTTS = SpeechSynthesis.GetInstance();
 
                                 skyrimTTS.SpeechSynth("spawning rabbits");
                             }).Start();
@@ -274,7 +275,7 @@ namespace TwitchBot
                         if (random.Next(1, 11) == 1)
                         {
                             new Thread(delegate () {
-                                SpeechSynthesis skyrimTTS = new SpeechSynthesis();
+                                SpeechSynthesis skyrimTTS = SpeechSynthesis.GetInstance();
 
                                 skyrimTTS.SpeechSynth("spawning skeevers");
                             }).Start();
@@ -289,7 +290,7 @@ namespace TwitchBot
                         if (random.Next(1, 6) == 1)
                         {
                             new Thread(delegate () {
-                                SpeechSynthesis skyrimTTS = new SpeechSynthesis();
+                                SpeechSynthesis skyrimTTS = SpeechSynthesis.GetInstance();
 
                                 skyrimTTS.SpeechSynth("spawning potions");
                             }).Start();
@@ -304,7 +305,7 @@ namespace TwitchBot
                         if (random.Next(1, 11) == 1)
                         {
                             new Thread(delegate () {
-                                SpeechSynthesis skyrimTTS = new SpeechSynthesis();
+                                SpeechSynthesis skyrimTTS = SpeechSynthesis.GetInstance();
 
                                 skyrimTTS.SpeechSynth("spawning bears");
                             }).Start();
@@ -319,7 +320,7 @@ namespace TwitchBot
                         if (random.Next(1, 11) == 1)
                         {
                             new Thread(delegate () {
-                                SpeechSynthesis skyrimTTS = new SpeechSynthesis();
+                                SpeechSynthesis skyrimTTS = SpeechSynthesis.GetInstance();
 
                                 skyrimTTS.SpeechSynth("spawning lydia");
                             }).Start();
@@ -334,7 +335,7 @@ namespace TwitchBot
                         if (random.Next(1, 11) == 1)
                         {
                             new Thread(delegate () {
-                                SpeechSynthesis skyrimTTS = new SpeechSynthesis();
+                                SpeechSynthesis skyrimTTS = SpeechSynthesis.GetInstance();
 
                                 skyrimTTS.SpeechSynth("spawning spiders");
                             }).Start();
@@ -349,7 +350,7 @@ namespace TwitchBot
                         if (random.Next(1, 21) == 1)
                         {
                             new Thread(delegate () {
-                                SpeechSynthesis skyrimTTS = new SpeechSynthesis();
+                                SpeechSynthesis skyrimTTS = SpeechSynthesis.GetInstance();
 
                                 skyrimTTS.SpeechSynth("spawning dragons. good luck!");
                             }).Start();
@@ -363,7 +364,7 @@ namespace TwitchBot
                         if (random.Next(1, 16) == 1)
                         {
                             new Thread(delegate () {
-                                SpeechSynthesis skyrimTTS = new SpeechSynthesis();
+                                SpeechSynthesis skyrimTTS = SpeechSynthesis.GetInstance();
 
                                 skyrimTTS.SpeechSynth("It's time for calcium!");
                             }).Start();
@@ -378,7 +379,7 @@ namespace TwitchBot
                         if (random.Next(1, 16) == 1)
                         {
                             new Thread(delegate () {
-                                SpeechSynthesis skyrimTTS = new SpeechSynthesis();
+                                SpeechSynthesis skyrimTTS = SpeechSynthesis.GetInstance();
 
                                 skyrimTTS.SpeechSynth("Blame Buzz");
                             }).Start();

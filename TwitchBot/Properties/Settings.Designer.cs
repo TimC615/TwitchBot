@@ -70,5 +70,29 @@ namespace TwitchBot.Properties {
                 this["OBSWebSocketAuth"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string TwitchClientReftreshToken {
+            get {
+                return ((string)(this["TwitchClientReftreshToken"]));
+            }
+            set {
+                this["TwitchClientReftreshToken"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string TwitchAccessToken {
+            get {
+                return ((string)(this["TwitchAccessToken"]));
+            }
+            set {
+                this["TwitchAccessToken"] = value;
+            }
+        }
     }
 }

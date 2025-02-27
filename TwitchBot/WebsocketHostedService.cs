@@ -19,6 +19,7 @@ using TwitchLib.Api.Interfaces;
 using TwitchLib.Api.Helix.Models.EventSub;
 using TwitchLib.Api.Helix.Models.Subscriptions;
 using System.Collections;
+using TwitchBot.Utility_Code;
 
 namespace TwitchBot
 {
@@ -93,13 +94,20 @@ namespace TwitchBot
                             bool deleteSubResult = await _TwitchAPI.Helix.EventSub.DeleteEventSubSubscriptionAsync(subscription.Id);
 
                             if (deleteSubResult)
+                            {
                                 _logger.LogInformation($"EventSub: Subscription {subscription.Id} deleted succesfully");
+                                WPFUtility.WriteToLog($"EventSub: Subscription {subscription.Id} deleted succesfully");
+                            }
                             else
+                            {
                                 _logger.LogError($"EventSub: Subscription {subscription.Id} deleted unsuccesfully");
+                                WPFUtility.WriteToLog($"EventSub: Subscription {subscription.Id} deleted unsuccesfully");
+                            }
                         }
                         catch(Exception except)
                         {
                             _logger.LogError($"EventSub: Error occurred when deleting subscription {subscription.Id}\t{except.Message}");
+                            WPFUtility.WriteToLog($"EventSub: Error occurred when deleting subscription {subscription.Id}\t{except.Message}");
                         }
                     }
                 }
@@ -112,7 +120,10 @@ namespace TwitchBot
         {
             _logger.LogInformation($"Websocket {_eventSubWebsocketClient.SessionId} connected!");
 
-            if (!e.IsRequestedReconnect && GlobalObjects.TwitchBroadcasterUserId != "-1")
+
+            //checks if userId is set to ensure EventSub subscriptions happen only when _TwitchAPI is connected
+            //(not sure how to manually trigger connecting by a WPF button press)
+            if (!e.IsRequestedReconnect && GlobalObjects.TwitchBroadcasterUserId != "-1")   
             {
                 //Subscribe to topics via the TwitchApi.Helix.EventSub object, this example shows how to subscribe to the channel follow event used in the example above.
 
@@ -169,6 +180,8 @@ namespace TwitchBot
                         _logger.LogInformation($"EventSub: New subscription made of type: {subscription.Type}" +
                         $"\tID: {subscription.Id}\tCost {subscription.Cost}\tStatus: {subscription.Status}\t" +
                         $"Creation Date: {subscription.CreatedAt}");
+
+                        WPFUtility.WriteToLog($"EventSub: New subscription made of type: {subscription.Type}");
                     }
                 }
 
@@ -213,6 +226,7 @@ namespace TwitchBot
                 return;
 
             var pointsRedemption = e.Notification.Payload.Event;
+            TwitchPointsRedeems.OnChannelPointsRewardRedeemed(e);
             _logger.LogInformation($"EventSub: Points Redemption of {pointsRedemption.Reward.Title} by {pointsRedemption.UserName} at {pointsRedemption.RedeemedAt}");
         }
 
@@ -230,7 +244,11 @@ namespace TwitchBot
             if (!GlobalObjects.botIsActive)
                 return;
 
-            _logger.LogInformation($"EventSub: Ad break started at {e.Notification.Payload.Event.StartedAt} for {e.Notification.Payload.Event.DurationSeconds} seconds");
+            new Thread(delegate () {
+                    TwitchUtility.OnCommercial_NewThread(e);
+                }).Start();
+
+                _logger.LogInformation($"EventSub: Ad break started at {e.Notification.Payload.Event.StartedAt} for {e.Notification.Payload.Event.DurationSeconds} seconds");
         }
     }
 }
