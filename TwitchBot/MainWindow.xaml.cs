@@ -64,10 +64,10 @@ using TwitchLib.Api.Helix.Models.Streams.CreateStreamMarker;
 
 //possibly provide functionality for pressing a key/key combo to put a marker in current twitch stream
 /*
-    CreateStreamMarkerRequest markerRequest = new CreateStreamMarkerRequest();
-    markerRequest.UserId = TwitchChannelId;
+CreateStreamMarkerRequest markerRequest = new CreateStreamMarkerRequest();
+markerRequest.UserId = TwitchChannelId;
 
-    _TwitchAPI.Helix.Streams.CreateStreamMarkerAsync(markerRequest);
+_TwitchAPI.Helix.Streams.CreateStreamMarkerAsync(markerRequest);
 */
 
 //confetti/other celebration for 1st redeem
@@ -82,6 +82,18 @@ using TwitchLib.Api.Helix.Models.Streams.CreateStreamMarker;
 
 //timeout roulette calculations: (current record number of spins * 30 seconds) (maybe logarithmic curve?) (some sort of curve)
 //start at a flat 30 seconds
+
+
+
+//Error when pressing "Stop Bot" button
+//triggers error on Line 86 of WebsocketHostedService:
+//"var activeSubscriptions = _TwitchAPI.Helix.EventSub.GetEventSubSubscriptionsAsync().Result;"
+
+//System.AggregateException: 'One or more errors occurred. (Your request was blocked due to bad credentials
+//(Do you have the right scope for your access token?).)'
+
+//BadScopeException: Your request was blocked due to bad credentials (Do you have the right scope for your access token?).
+
 
 
 //---------------------------------------------------------------------------------------------------------------------------
@@ -1379,6 +1391,8 @@ namespace TwitchBot
         {
             if (_TwitchClient != null)
             {
+                GlobalObjects.EventSubSubscribedEvents = _TwitchAPI.Helix.EventSub.GetEventSubSubscriptionsAsync().Result.Subscriptions;
+
                 _TwitchClient.Disconnect();
             }
 

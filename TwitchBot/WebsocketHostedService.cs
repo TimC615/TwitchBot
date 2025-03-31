@@ -83,6 +83,7 @@ namespace TwitchBot
 
             if(GlobalObjects.TwitchBroadcasterUserId != "-1")
             {
+                /*
                 var activeSubscriptions = _TwitchAPI.Helix.EventSub.GetEventSubSubscriptionsAsync().Result;
                 foreach (var subscription in activeSubscriptions.Subscriptions)
                 {
@@ -108,6 +109,37 @@ namespace TwitchBot
                         {
                             _logger.LogError($"EventSub: Error occurred when deleting subscription {subscription.Id}\t{except.Message}");
                             WPFUtility.WriteToLog($"EventSub: Error occurred when deleting subscription {subscription.Id}\t{except.Message}");
+                        }
+                    }
+                }
+                */
+                if(GlobalObjects.EventSubSubscribedEvents != null && GlobalObjects.EventSubSubscribedEvents.Length > 0)
+                {
+                    foreach (var subscription in GlobalObjects.EventSubSubscribedEvents)
+                    {
+                        //_logger.LogInformation($"EventSub Subscription {subscription.Id} status: {subscription.Status}");
+                        if (subscription.Status == "enable")
+                        {
+                            try
+                            {
+                                bool deleteSubResult = await _TwitchAPI.Helix.EventSub.DeleteEventSubSubscriptionAsync(subscription.Id);
+
+                                if (deleteSubResult)
+                                {
+                                    _logger.LogInformation($"EventSub: Subscription {subscription.Id} deleted succesfully");
+                                    WPFUtility.WriteToLog($"EventSub: Subscription {subscription.Id} deleted succesfully");
+                                }
+                                else
+                                {
+                                    _logger.LogError($"EventSub: Subscription {subscription.Id} deleted unsuccesfully");
+                                    WPFUtility.WriteToLog($"EventSub: Subscription {subscription.Id} deleted unsuccesfully");
+                                }
+                            }
+                            catch (Exception except)
+                            {
+                                _logger.LogError($"EventSub: Error occurred when deleting subscription {subscription.Id}\t{except.Message}");
+                                WPFUtility.WriteToLog($"EventSub: Error occurred when deleting subscription {subscription.Id}\t{except.Message}");
+                            }
                         }
                     }
                 }
