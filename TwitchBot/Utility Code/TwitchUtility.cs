@@ -6,7 +6,9 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TwitchLib.Api;
 using TwitchLib.Api.Auth;
+using TwitchLib.Api.Helix.Models.Moderation.GetModerators;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Channel;
 using TwitchLib.PubSub.Events;
@@ -18,7 +20,7 @@ namespace TwitchBot.Utility_Code
         private static readonly string FIRSTREDEEMSJSONFILENAME = @"firstredeemsleaderboard.json";
 
 
-        async static Task CheckAccessToken()
+        public async static Task CheckAccessToken()
         {
             //Log("Checking AccessToken...");
 
@@ -51,7 +53,6 @@ namespace TwitchBot.Utility_Code
                 }
             }
         }
-
 
         async static public void TtsRedeem(ChannelPointsCustomRewardRedemption e, int speechRate)
         {
@@ -194,6 +195,29 @@ namespace TwitchBot.Utility_Code
             {
                 WPFUtility.WriteToLog($"rouletteLeaderboard error while saving to file - {except.Message}");
                 return;
+            }
+        }
+
+        static async public void ReinstateModRole(TwitchAPI _TwitchAPI, string TwitchChannelId, string userIdToMod, string username, int banLength)
+        {
+            Thread.Sleep(banLength * 1000); //wait for user's timeout to finish (seconds)
+
+            try
+            {
+                await _TwitchAPI.Helix.Moderation.AddChannelModeratorAsync(TwitchChannelId, userIdToMod);
+
+                List<string> testSearchMods = new List<string>();
+                testSearchMods.Add(userIdToMod);
+                GetModeratorsResponse modsResult = await _TwitchAPI.Helix.Moderation.GetModeratorsAsync(TwitchChannelId, testSearchMods);
+
+                if (modsResult.Data.Length > 0)
+                    WPFUtility.WriteToLog($"Mod Role reinstated for: {modsResult.Data[0].UserName}");
+                else
+                    throw new Exception("Unable to restore mod role for: " + username);
+            }
+            catch (Exception except)
+            {
+                WPFUtility.WriteToLog($"ReinstateModRole Error: {except.Message}");
             }
         }
     }

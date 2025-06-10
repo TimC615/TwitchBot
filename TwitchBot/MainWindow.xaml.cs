@@ -87,10 +87,6 @@ _TwitchAPI.Helix.Streams.CreateStreamMarkerAsync(markerRequest);
 //BadScopeException: Your request was blocked due to bad credentials (Do you have the right scope for your access token?).
 
 
-//Add settings option (or under launch menu tile?) to auto launch bot on app start
-
-
-
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
 {
@@ -131,16 +127,19 @@ namespace TwitchBot
         private TwitchAPI _TwitchAPI;
         //Look for EventSub events in "WebsocketHostedServices.cs". Handles things like points redeems and ad break triggers.
 
+        private TwitchChatCommands _TwitchChatCommands;
+
+
         private static readonly int TIMEOUTROULETTELENGTH = 30;      //timeout length, in seconds
         private static readonly int TIMEOUTROULETTETOPPOSITIONSTODISPLAY = 3;   //used to determine max number of results to show for leaderboard display
         
-        private Dictionary<string, int> rouletteLeaderboard;
+        public static Dictionary<string, int> rouletteLeaderboard;
 
         private readonly string ROULETTEJSONFILENAME = @"rouletteleaderboard.json";
         private static readonly string FIRSTREDEEMSJSONFILENAME = @"firstredeemsleaderboard.json";
 
         //API Ninja
-        private static HttpClient NinjaAPIConnection { get; set; }
+        private static HttpClient NinjaAPIConnection { get; set; }  //initialized in TwitchChatCommands (doing this so that connection can be manually closed when MainWindow closes)
 
         //OBS Websocket
         protected OBSWebsocket obs;
@@ -155,7 +154,7 @@ namespace TwitchBot
         private string TwitchChannelId; //needed for some API requests
 
         //Trigger variables
-        private bool twitchPlaysEnable = false;
+        public static bool twitchPlaysEnable = false;
         private bool obsConnected = false;
 
         //Other Objects
@@ -559,15 +558,13 @@ namespace TwitchBot
                         InitializeTwitchClient(TwitchChannelName, Properties.Settings.Default.TwitchAccessToken);
                         InitializeTwitchAPI(Properties.Settings.Default.TwitchAccessToken);
 
-
-                        //initialize connection to facts api
-                        InitializeNinjaAPI();
-
                         //initialize connection to OBS websocket
                         InitializeOBSWebSocket();
 
                         //initialize dictionary holding leaderboard to last saved standings
                         rouletteLeaderboard = GetRouletteLeaderboardFromJson();
+
+                        _TwitchChatCommands = new TwitchChatCommands(_TwitchClient, _TwitchAPI, TwitchChannelName, TwitchChannelId, _SpeechSynth, NinjaAPIConnection);
                     }
                 }
             };
@@ -656,15 +653,6 @@ namespace TwitchBot
 
             _TwitchClient.Connect();
         }
-        
-        void InitializeNinjaAPI()
-        {
-            NinjaAPIConnection = new HttpClient();
-            NinjaAPIConnection.BaseAddress = new Uri("https://api.api-ninjas.com/v1/");
-            //requires an API key to be added to requests but will be handled during actual GET requests
-
-            //ninjaAPIConnection.BaseAddress = new Uri("https://jsonplaceholder.typicode.com/");
-        }
 
         void InitializeOBSWebSocket()
         {
@@ -707,345 +695,10 @@ namespace TwitchBot
             Log($"OnRateLimit - Channel:{e.Channel}\tMessage: {e.Message}");
         }
 
+
         async private void Bot_OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)
         {
-            string commandText = e.Command.CommandText.ToLower();
-
-            //2 ways to deal with commands: if/switch statements OR dictionary lookups
-
-            //
-            //---------------------------------------------------------------------------------------------------------------------
-            //
-
-            //responses are added to dictionary in lowercase
-            if (CommandsStaticResponses.TryGetValue(commandText, out string? value))
-            {
-                _TwitchClient.SendReply(TwitchChannelName,
-                    e.Command.ChatMessage.Id,
-                    value);
-            }
-            //
-            //---------------------------------------------------------------------------------------------------------------------
-            //
-
-            //more complex comands
-            else
-            {
-                //Tells user how to use commands
-                if (commandText.Equals("help"))
-                {
-                    List<string> test = e.Command.ArgumentsAsList;
-
-                    if (e.Command.ArgumentsAsList.Count == 0)
-                        _TwitchClient.SendReply(TwitchChannelName,
-                            e.Command.ChatMessage.Id,
-                            "Type \"!help <command>\" to see how you can use it (E.g. !help roll)");
-                    else
-                    {
-                        try
-                        {
-                            string helpSpecifier = e.Command.ArgumentsAsList[0].ToLower();
-
-                            switch (helpSpecifier)
-                            {
-                                case "about":
-                                case "discord":
-                                case "twitter":
-                                case "lurk":
-                                case "fact":
-                                case "joke":
-                                case "1st":
-                                case "first":
-                                    _TwitchClient.SendReply(TwitchChannelName,
-                                        e.Command.ChatMessage.Id,
-                                        "Enter \"!" + helpSpecifier + "\" and I'll do all the rest");
-                                    break;
-                                case "roll":
-                                    _TwitchClient.SendReply(TwitchChannelName,
-                                        e.Command.ChatMessage.Id,
-                                        "Enter \"!roll d<number of sides>\" to roll a single die or \"!roll <number of dice>d<number of sides>\" to roll multiple dice! (e.g. !roll d6) or !roll 3d20");
-                                    break;
-                                case "roulette":
-                                    _TwitchClient.SendReply(TwitchChannelName,
-                                        e.Command.ChatMessage.Id,
-                                        "Enter \"!roulette\" for a chance to time yourself out for " + TIMEOUTROULETTELENGTH + " seconds");
-                                    break;
-                                case "rouletteleaderboard":
-                                    _TwitchClient.SendReply(TwitchChannelName,
-                                        e.Command.ChatMessage.Id,
-                                        "Enter \"!rouletteleaderboard\" to see who has the highest active streaks on the timeout roulette wheel!");
-                                    break;
-                                default:
-                                    break;
-                            }
-                        }
-                        catch (Exception except)
-                        {
-                            Log("Help command: " + except.Message);
-                        }
-                    }
-                }
-                //
-                //------------------------------------------------------------------------------------------------------------------
-                //
-                //roll a random dX sided die
-                if (commandText.Contains("roll", StringComparison.OrdinalIgnoreCase) && e.Command.ArgumentsAsList.Count >= 1)
-                {
-                    try
-                    {
-                        //retrieve and split roll command into 2 segments: *number of dice* and *size of die*
-                        List<string> rollCommand = e.Command.ArgumentsAsList;
-
-                        string rollInput = rollCommand[0].ToLower();
-                        string[] rollParams;
-
-                        if (!rollInput.Contains('d'))
-                        {
-                            rollParams = ["1", rollInput];
-                        }
-                        else
-                            rollParams = rollInput.Split("d");
-
-
-                        //convert param0 to a long
-                        int diceToRoll;
-                        try
-                        {
-                            //take care of all reasonable ways a user might want to roll just 1 die
-                            if (rollParams[0] == null || rollParams[0] == "" || rollParams[0] == "1")
-                            {
-                                diceToRoll = 1;
-                            }
-                            else
-                            {
-                                diceToRoll = Int32.Parse(rollParams[0]);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Log("Roll command error converting param 0: " + ex.Message);
-                            _TwitchClient.SendReply(TwitchChannelName,
-                                e.Command.ChatMessage.Id,
-                                "The number of dice to roll needs to be a whole number greater than or equal to 1");
-                            diceToRoll = -1;
-                        }
-
-                        //try to convert param[1] to long if param[0] was a valid number
-                        if(diceToRoll != -1)
-                        {
-                            try
-                            {
-                                long sizeOfDie = Int64.Parse(rollParams[1]);
-                                if (sizeOfDie <= 1)
-                                    _TwitchClient.SendReply(TwitchChannelName,
-                                        e.Command.ChatMessage.Id,
-                                        "The size of the die to roll needs to be a whole number greater than 1");
-                                else
-                                    Roll(diceToRoll, sizeOfDie, e.Command.ChatMessage.Id);    //method assumes provided parameters are always valid numbers
-                            }
-                            catch (Exception ex)
-                            {
-                                Log("Roll command error converting param 1: " + ex.Message);
-                            }
-                        }
-                    }
-                    catch (Exception except)
-                    {
-                        Log("Roll command: " + except.Message);
-                    }
-                }
-                //
-                //------------------------------------------------------------------------------------------------------------------
-                //
-                //Grab random fact from https://api-ninjas.com/
-                if (commandText.Equals("fact"))
-                {
-                    new Thread(APINinjaGetFact).Start();
-                }
-                //
-                //------------------------------------------------------------------------------------------------------------------
-                //
-                //Grab random dad joke from https://api-ninjas.com/
-                if (commandText.Equals("joke"))
-                {
-                    new Thread(APINinjaGetDadJoke).Start();
-                }
-                //
-                //------------------------------------------------------------------------------------------------------------------
-                //
-                //Random chance for user to time themself out. If user has roles, automatically re-apply once timeout is done
-                if (commandText.Equals("roulette"))
-                {
-                    try
-                    {
-                        //Log($"Roulette triggered by {e.Command.ChatMessage.DisplayName}");
-
-                        Random random = new Random();
-
-                        if (e.Command.ChatMessage.IsMe || e.Command.ChatMessage.IsBroadcaster || e.Command.ChatMessage.IsStaff)
-                        {
-                            _TwitchClient.SendReply(TwitchChannelName,
-                                e.Command.ChatMessage.Id,
-                                $"Sorry {e.Command.ChatMessage.Username}, you're not able to be timed out so you can't spin the roulette");
-                            throw new Exception("User tried to timeout as restricted role");
-                        }
-
-                        //1 in 10 chance 
-                        if (random.Next(1, 11) == 1)
-                        {
-                            await CheckAccessToken();
-
-                            bool isMod = false;
-                            if(e.Command.ChatMessage.IsModerator)
-                                isMod = true;
-
-
-
-                            int leaderboardSpins = 0;
-                            if (rouletteLeaderboard.ContainsKey(e.Command.ChatMessage.Username))
-                            {
-                                leaderboardSpins = rouletteLeaderboard[e.Command.ChatMessage.Username];
-                                rouletteLeaderboard.Remove(e.Command.ChatMessage.Username);
-                            }
-
-                            string timeoutRouletteMessage = $"Congrats {e.Command.ChatMessage.DisplayName}! You won the roulette and timed yourself out after surviving {leaderboardSpins} spins!";
-                            _TwitchClient.SendReply(TwitchChannelName, 
-                                e.Command.ChatMessage.Id, 
-                                timeoutRouletteMessage);
-
-                            //ban info for current user
-                            BanUserRequest request = new BanUserRequest();
-                            request.UserId = e.Command.ChatMessage.UserId;
-                            request.Reason = "Congrats! You won the timeout roulette!";
-                            request.Duration = TIMEOUTROULETTELENGTH;
-
-                            //add specific channel and acting moderator info to current user ban info
-                            BanUserResponse result = _TwitchAPI.Helix.Moderation.BanUserAsync(
-                                TwitchChannelId,
-                                TwitchChannelId,
-                                request
-                                ).Result;
-
-                            //Log("Roulette result: " + result.Data);
-
-                            SaveRouletteLeaderboardToJson();
-
-                            if (isMod)
-                            {
-                                new Thread(delegate () {
-                                    ReinstateModRole(e.Command.ChatMessage.UserId, e.Command.ChatMessage.Username, TIMEOUTROULETTELENGTH);
-                                }).Start();
-                            }
-                        }
-                        else
-                        {
-                            //check if user is in leaderboard already
-                            if (rouletteLeaderboard.ContainsKey(e.Command.ChatMessage.Username))
-                            {
-                                rouletteLeaderboard[e.Command.ChatMessage.Username]++;
-                            }
-                            else
-                                rouletteLeaderboard.Add(e.Command.ChatMessage.Username, 1);
-
-                            int rouletteLeaderboardCount = rouletteLeaderboard[e.Command.ChatMessage.Username];
-
-
-                            _TwitchClient.SendReply(TwitchChannelName, 
-                                e.Command.ChatMessage.Id,
-                                $"{e.Command.ChatMessage.DisplayName} has survived the timeout roulette {rouletteLeaderboardCount} time(s)");
-                            
-                            SaveRouletteLeaderboardToJson();
-                        }
-                    }
-                    catch (Exception except)
-                    {
-                        Log("Roulette Exception: " + except.Message);
-                    }
-                }
-                //
-                //------------------------------------------------------------------------------------------------------------------
-                //
-                //Displays a list of the chatters with the most timeout roulette spins without a timeout
-                if (commandText.Equals("rouletteleaderboard"))
-                {
-                    var topGroups = rouletteLeaderboard.OrderByDescending(x => x.Value).GroupBy(x => x.Value).Take(3);
-
-                    List<RouletteLeaderboardPosition> topLeaderboardSpots = GetTopRouletteLeaderboardPositions(rouletteLeaderboard);
-
-                    if(topLeaderboardSpots.Count == 0)
-                    {
-                        _TwitchClient.SendReply(TwitchChannelName,
-                        e.Command.ChatMessage.Id,
-                        "There are currently no people listed on the timeout roulette leaderboard. Make sure to have at least 1 spin without being timed out to show up here!");
-                    }
-                    else
-                    {
-                        string leaderboardOutput = $"The most active spins without a timeout are: ";
-                        foreach (var topSpot in topLeaderboardSpots)
-                        {
-                            if(topSpot.spinCount == 1)
-                                leaderboardOutput += $" {topSpot.username} with {topSpot.spinCount} spin,";
-                            else
-                                leaderboardOutput += $" {topSpot.username} with {topSpot.spinCount} spins,";
-                        }
-
-                        leaderboardOutput = leaderboardOutput.Remove(leaderboardOutput.LastIndexOf(","), 1);
-
-                        _TwitchClient.SendReply(TwitchChannelName,
-                            e.Command.ChatMessage.Id,
-                            leaderboardOutput);
-                    }
-                }
-                if (commandText.Equals("first") || commandText.Equals("1st"))
-                {
-                    Dictionary<string, int> firstRedeemLeaderboard = null;
-                    try
-                    {
-                        string firstRedeemJsonInput = File.ReadAllText(FIRSTREDEEMSJSONFILENAME);
-
-                        var deserializedLeaderboard = JsonConvert.DeserializeObject<Dictionary<string, int>>(firstRedeemJsonInput);
-                        if (deserializedLeaderboard == null)
-                            Log($"FirstRedeem leaderboard was empty when trying to read user scores");
-                        else
-                            firstRedeemLeaderboard = deserializedLeaderboard;
-                    }
-                    catch (Exception except)
-                    {
-                        WPFUtility.WriteToLog($"Read from first redeem leaderboard JSON error: {except.Message}");
-                        return;
-                    }
-
-                    if(firstRedeemLeaderboard != null)
-                    {
-                        string username = e.Command.ChatMessage.DisplayName;
-
-                        if(firstRedeemLeaderboard.ContainsKey(username))
-                            _TwitchClient.SendReply(TwitchChannelName,
-                                e.Command.ChatMessage.Id,
-                                $"{username} has been first {firstRedeemLeaderboard[username]} time(s)!");
-                        else
-                            _TwitchClient.SendReply(TwitchChannelName,
-                                e.Command.ChatMessage.Id,
-                                $"{username} hasn't been first before.");
-                    }
-                }
-                //
-                //------------------------------------------------------------------------------------------------------------------
-                //
-                //Tell user what skyrim spawn commands are avaialble (only when Twitch Plays is active)
-                if (commandText.Equals("skyrim") && twitchPlaysEnable)
-                {
-                    string skyrimCommands = "You can mess with skyrim by saying any of the following: forward, back, stop, left, right, jump, " +
-                        "cheese, soup, wine, potions, rabbits, skeevers, bears, lydia, spiders, dragons, cheesemageddon, and soupmageddon";
-                    _TwitchClient.SendReply(TwitchChannelName, 
-                        e.Command.ChatMessage.Id,
-                        skyrimCommands);
-                }
-
-            }
-            //
-            //---------------------------------------------------------------------------------------------------------------------
-            //
+            _TwitchChatCommands.BaseCommandMethod(e.Command);
         }
 
         //!!! might need to make multiple threads to act on multiple chat messages simultaniously !!!
@@ -1185,62 +838,6 @@ namespace TwitchBot
             _SpeechSynth.SpeechSynth("Twitch Plays is now live");
         }
 
-        //Ping API Ninja for a fact and output to twitch chat
-        async private void APINinjaGetFact()
-        {
-            try
-            {
-                //no need to add a limit since default is already 1
-                string apiUrl = "facts?X-Api-Key=" + Properties.Settings.Default.APINinjaKey;
-                var response = await NinjaAPIConnection.GetAsync(apiUrl);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    //API get request
-                    string stringResponse = await response.Content.ReadAsStringAsync();
-
-                    //convert API call to array of objects. we only ever call 1 result from API so length will always be 1
-                    APINinjaFacts[] result = JsonConvert.DeserializeObject<APINinjaFacts[]>(stringResponse);
-
-                    _TwitchClient.SendMessage(TwitchChannelName, result[0].fact);
-                    //TwitchPlays.SpeechSynthSync(result[0].fact);
-                    _SpeechSynth.SpeechSynth(result[0].fact);
-                }
-            }
-            catch (Exception except)
-            {
-                Log("Fact command: " + except.Message);
-            }
-        }
-
-        //Ping API Ninja for a dad joke and output to twitch chat
-        async private void APINinjaGetDadJoke()
-        {
-            try
-            {
-                //no need to add a limit since default is already 1
-                string apiUrl = "dadjokes?X-Api-Key=" + Properties.Settings.Default.APINinjaKey;
-                var response = await NinjaAPIConnection.GetAsync(apiUrl);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    //API get request
-                    string stringResponse = await response.Content.ReadAsStringAsync();
-
-                    //convert API call to array of objects. we only ever call 1 result from API so length will always be 1
-                    APINinjaDadJokes[] result = JsonConvert.DeserializeObject<APINinjaDadJokes[]>(stringResponse);
-
-                    _TwitchClient.SendMessage(TwitchChannelName, result[0].joke);
-                    //TwitchPlays.SpeechSynthSync(result[0].joke);
-                    _SpeechSynth.SpeechSynth(result[0].joke);
-                }
-            }
-            catch (Exception except)
-            {
-                Log("Dad Joke command: " + except.Message);
-            }
-        }
-
         //Checks current access token. If invalid then get new Access Token
         async public Task CheckAccessToken()
         {
@@ -1312,31 +909,6 @@ namespace TwitchBot
                 Log($"Current access token is valid for {tokenResult.ExpiresIn} seconds");
         }
 
-        //Gives prior mods the mod role after timeout since Twitch doesn't do this automatically
-        async private void ReinstateModRole(string userIdToMod, string username, int banLength)
-        {
-            //------------------------------TEST  (add 2 seconds to sleep. might fix issue of mods not getting role back )
-            Thread.Sleep(banLength * 1000); //wait for user's timeout to finish (seconds)
-
-            try
-            {
-                await _TwitchAPI.Helix.Moderation.AddChannelModeratorAsync(TwitchChannelId, userIdToMod);
-
-                List<string> testSearchMods = new List<string>();
-                testSearchMods.Add(userIdToMod);
-                GetModeratorsResponse modsResult = await _TwitchAPI.Helix.Moderation.GetModeratorsAsync(TwitchChannelId, testSearchMods);
-
-                if (modsResult.Data.Length > 0)
-                    Log($"Mod Role reinstated for: {modsResult.Data[0].UserName}");
-                else
-                    throw new Exception("Unable to restore mod role for: " + username);
-            }
-            catch (Exception except)
-            {
-                Log($"ReinstateModRole Error: {except.Message}");
-            }
-        }
-
         //read .json file and intialize dictionary to it
         public Dictionary<string, int> GetRouletteLeaderboardFromJson()
         {
@@ -1355,92 +927,6 @@ namespace TwitchBot
                 Log($"Read from roulette leaderboard JSON error: {except.Message}");
                 return new Dictionary<string, int>();
             }
-        }
-
-        //saves dictionary as a .json file
-        public void SaveRouletteLeaderboardToJson()
-        {
-            if (rouletteLeaderboard == null)
-            {
-                Log($"rouletteLeaderboard was null when trying to save to file");
-                return;
-            }
-
-            //var rouletteJson = JsonConvert.SerializeObject(rouletteLeaderboard.ToArray());    //for list
-            var rouletteJson = JsonConvert.SerializeObject(rouletteLeaderboard);
-
-            System.IO.File.WriteAllText(ROULETTEJSONFILENAME, rouletteJson);
-        }
-
-        //returns a list of the top X people in timeout roulette leaderboard
-        public List<RouletteLeaderboardPosition> GetTopRouletteLeaderboardPositions(Dictionary<string, int> leaderboard)
-        {
-            List<RouletteLeaderboardPosition> topPositions = new List<RouletteLeaderboardPosition>();
-
-            var topGroups = rouletteLeaderboard.OrderByDescending(x => x.Value).GroupBy(x => x.Value).Take(TIMEOUTROULETTETOPPOSITIONSTODISPLAY);
-
-            foreach (var topGroup in topGroups)
-            {
-                foreach (var topPair in topGroup)
-                {
-                    if(topPositions.Count != TIMEOUTROULETTETOPPOSITIONSTODISPLAY && topPair.Value != 0)
-                    {
-                        RouletteLeaderboardPosition currPosition = new RouletteLeaderboardPosition(topPair.Key, topPair.Value);
-                        topPositions.Add(currPosition);
-                    }
-                    else
-                        return topPositions;
-                }
-            }
-
-            return topPositions;
-        }
-
-        //Handles the disabling of talking head image in OBS after TTS points redeem events are called
-        public void CloseTTSFace()
-        {
-            try
-            {
-                //ensure TTS is running before starting to check states
-                Thread.Sleep(100);
-
-                //check every 100ms if TTS is actively speaking. if finished speaking, disable TTS face
-                while (_SpeechSynth.asyncSynth.State.ToString() == "Speaking")
-                {
-                    Thread.Sleep(100);
-                }
-
-                if (obs.IsConnected && ttsSceneItem != null)
-                {
-                    obs.SetSceneItemEnabled(ttsSceneName, ttsSceneItem.ItemId, false);
-                }
-            }
-            catch (Exception e)
-            {
-                Log("CloseTTSFace Error: " + e.Message);
-            }
-        }
-
-        //handles returning a total value for !roll chat command
-        public void Roll(long numOfDice, long sizeOfDie, string replyId)
-        {
-            Random random = new Random();
-            long total = 0;
-
-            for(int x = 1; x <= numOfDice; x++)
-            {
-                total += random.NextInt64(1, sizeOfDie + 1);
-            }
-
-            if (total == 1)
-            {
-                _TwitchClient.SendReply(TwitchChannelName, replyId, "You rolled: a nat 1! Good job!");
-            }
-            else
-            {
-                _TwitchClient.SendReply(TwitchChannelName, replyId, "You rolled: " + total);
-            }
-
         }
 
         void CloseEverything()
