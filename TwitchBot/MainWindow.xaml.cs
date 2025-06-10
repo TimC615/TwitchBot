@@ -89,8 +89,6 @@ _TwitchAPI.Helix.Streams.CreateStreamMarkerAsync(markerRequest);
 
 //Add settings option (or under launch menu tile?) to auto launch bot on app start
 
-//Add a leaderboard for number of 1st redeems per person
-
 
 
 //---------------------------------------------------------------------------------------------------------------------------
@@ -196,6 +194,19 @@ namespace TwitchBot
             setAlignmentValue();
             SystemParameters.StaticPropertyChanged += (sender, e) => { setAlignmentValue(); };
 
+            if (Properties.Settings.Default.ConnectBotOnLaunch)
+            {
+                ConnectOnLaunchMenuItem.IsChecked = true;
+
+                StartBot();
+                RestartBotMenuItem.IsEnabled = true;
+                StopBotMenuItem.IsEnabled = true;
+            }
+            else
+            {
+                ConnectOnLaunchMenuItem.IsChecked = false;
+            }
+
         }
 
 
@@ -258,6 +269,18 @@ namespace TwitchBot
             CheckCurrentAccessToken.IsEnabled = false;
 
             TestButton.IsEnabled = false;
+        }
+
+        private void ConnectBotOnLaunchMenuItem_Checked(object sender, RoutedEventArgs e)
+        {
+            Properties.Settings.Default.ConnectBotOnLaunch = true;
+            Properties.Settings.Default.Save();
+        }
+
+        private void ConnectBotOnLaunchMenuItem_Unchecked(object sender, RoutedEventArgs e)
+        {
+            Properties.Settings.Default.ConnectBotOnLaunch = false;
+            Properties.Settings.Default.Save();
         }
 
         private void SkipCurrentTTS_Click(object sender, RoutedEventArgs e)

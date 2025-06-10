@@ -94,5 +94,17 @@ namespace TwitchBot.Properties {
                 this["TwitchAccessToken"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool ConnectBotOnLaunch {
+            get {
+                return ((bool)(this["ConnectBotOnLaunch"]));
+            }
+            set {
+                this["ConnectBotOnLaunch"] = value;
+            }
+        }
     }
 }

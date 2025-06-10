@@ -12,27 +12,36 @@
             <!-- https://stackoverflow.com/questions/9936796/create-a-menu-bar-in-wpf -->
             <Menu VerticalAlignment="Top" Width="Auto" Height="20">
                 <MenuItem Header="_File">
-                    <MenuItem Name="Settings" Header="_Settings" HorizontalAlignment="Left" Width="140" Click="SettingsButton_Click"/>
-                    <MenuItem x:Name="AppExit" Header="Exit" HorizontalAlignment="Left" Width="140" Click="CloseMenuItem_Click"/>
+                    <MenuItem Name="Settings" Header="_Settings" HorizontalAlignment="Left" Click="SettingsButton_Click"/>
+                    <MenuItem x:Name="AppExit" Header="Exit" HorizontalAlignment="Left" Click="CloseMenuItem_Click"/>
                 </MenuItem>
+                
                 <MenuItem Header="_Launch">
-                    <MenuItem Name="ConnectToTwitch" Header="_Start Bot" HorizontalAlignment="Left" Width="200" Click="StartBotMenuItem_Click"/>
-                    <MenuItem Name="StopBotMenuItem" Header="_Stop Bot" HorizontalAlignment="Left" Width="200" IsEnabled="False" Click="StopBotMenuItem_Click"/>
-                    <MenuItem Name="RestartBotMenuItem" Header="_Restart Bot" HorizontalAlignment="Left" Width="200" IsEnabled="False" Click="RestartBotMenuItem_Click"/>
+                    <MenuItem Name="ConnectToTwitch" Header="_Start Bot" HorizontalAlignment="Left" Click="StartBotMenuItem_Click"/>
+                    <MenuItem Name="StopBotMenuItem" Header="_Stop Bot" HorizontalAlignment="Left" IsEnabled="False" Click="StopBotMenuItem_Click"/>
+                    <MenuItem Name="RestartBotMenuItem" Header="_Restart Bot" HorizontalAlignment="Left" IsEnabled="False" Click="RestartBotMenuItem_Click"/>
                     <Separator></Separator>
-                    <MenuItem Name="twitchPlaysButton" Header="_Start Twitch Plays" HorizontalAlignment="Left" Width="200" IsEnabled="False" Click="TwitchPlaysButton_Click"/>
+                    
+                    <MenuItem Name="ConnectOnLaunchMenuItem" Header="_Start Bot on App Launch" HorizontalAlignment="Left" IsCheckable="True" Checked="ConnectBotOnLaunchMenuItem_Checked" Unchecked="ConnectBotOnLaunchMenuItem_Unchecked"/>
+                    <Separator></Separator>
+                    
+                    <MenuItem Name="twitchPlaysButton" Header="_Start Twitch Plays" HorizontalAlignment="Left" IsEnabled="False" Click="TwitchPlaysButton_Click"/>
                 </MenuItem>
+                
                 <MenuItem Header="_TTS">
-                    <MenuItem Name="SpeechSynthPauseResume" Header="_Pause TTS" HorizontalAlignment="Left" Width="200" IsEnabled="False" Click="PauseResumeTTSMenuItem_Click"/>
+                    <MenuItem Name="SpeechSynthPauseResume" Header="_Pause TTS" HorizontalAlignment="Left" IsEnabled="False" Click="PauseResumeTTSMenuItem_Click"/>
                     <Separator></Separator>
-                    <MenuItem Name="SpeechSynthClearAllPrompts" Header="_Clear TTS Queue" HorizontalAlignment="Left" Width="200" IsEnabled="False" Click="ClearAllTTSPromptsMenuItem_Click"/>
+                    
+                    <MenuItem Name="SpeechSynthClearAllPrompts" Header="_Clear TTS Queue" HorizontalAlignment="Left" IsEnabled="False" Click="ClearAllTTSPromptsMenuItem_Click"/>
                 </MenuItem>
+                
                 <MenuItem Header="_OBS">
-                    <MenuItem Name="ConnectOBS" Header="_Connect OBS" HorizontalAlignment="Left" Width="200" IsEnabled="False" Click="ConnectOBSMenuItem_Click"/>
-                    <MenuItem Name="DisconnectOBS" Header="_Disconnect OBS" HorizontalAlignment="Left" Width="200" IsEnabled="False" Click="DisconnectOBSMenuItem_Click"/>
+                    <MenuItem Name="ConnectOBS" Header="_Connect OBS" HorizontalAlignment="Left" IsEnabled="False" Click="ConnectOBSMenuItem_Click"/>
+                    <MenuItem Name="DisconnectOBS" Header="_Disconnect OBS" HorizontalAlignment="Left" IsEnabled="False" Click="DisconnectOBSMenuItem_Click"/>
                 </MenuItem>
+                
                 <MenuItem Header="_Advanced">
-                    <MenuItem Name="CheckCurrentAccessToken" Header="_Check Access Token" HorizontalAlignment="Left" Width="200" IsEnabled="False" Click="CheckAccessTokenMenuItem_Click"/>
+                    <MenuItem Name="CheckCurrentAccessToken" Header="_Check Access Token" HorizontalAlignment="Left" IsEnabled="False" Click="CheckAccessTokenMenuItem_Click"/>
                 </MenuItem>
             </Menu>
 
