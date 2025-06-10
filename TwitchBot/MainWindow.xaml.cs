@@ -20,12 +20,14 @@ using TwitchLib.Api.Helix.Models.Users.GetUsers;
 using TwitchLib.Api.Helix.Models.Moderation.GetModerators;
 using TwitchLib.Api.Helix.Models.Moderation.GetBannedUsers;
 using TwitchLib.Api.Helix.Models.Streams.CreateStreamMarker;
+using TwitchBot.Utility_Code;
 
 //Base functionality taken from HonestDanGames' Youtube channel https://youtu.be/Ufgq6_QhVKw?si=QYBbDl0sYVCy3QVF
 //Provides networking functionality to connect program to Twitch, beginner understanding of setting up API event handlers,
 //and printing text responses to Twitch chat
 
 
+//--Used for old web socket connection implementation. Keeping around for now just in case chaos happens--
 //If code throws a web socket permissions error, open run window, search for "services.msc",
 //and stop "World Wide Web Publishing Service". Should clear up port 80 (needed for when the local web server is created)
 
@@ -35,13 +37,6 @@ using TwitchLib.Api.Helix.Models.Streams.CreateStreamMarker;
 //maybe put in timed messages (eg: after 30 min shout out socials and following)
 
 //maybe put in automatic discord messaging? (eg: hey i'm live messages)
-
-
-//TTS REDEEM: look into role filtering for custom talking head images
-
-//TTS Redeem: look into spam filter
-//potentially have the skip (or other state changes of TTS) bound to global hotkey button like what's done in death counter program
-//manual skip button implemented. still undecided on spam filter
 
 //could be fun to have a twitch extension (or simply apply based on role of user) to add a border or effect to talking head
 
@@ -70,9 +65,6 @@ markerRequest.UserId = TwitchChannelId;
 _TwitchAPI.Helix.Streams.CreateStreamMarkerAsync(markerRequest);
 */
 
-//confetti/other celebration for 1st redeem
-//tiny confetti/other silly celebration for not 1st redeem
-
 
 //Move handling of chat commands, points redeems, and ad breaks to new classes to clean up code
 //Link the starting of EventSub websocket code to user pressing "start bot" WPF button
@@ -93,6 +85,11 @@ _TwitchAPI.Helix.Streams.CreateStreamMarkerAsync(markerRequest);
 //(Do you have the right scope for your access token?).)'
 
 //BadScopeException: Your request was blocked due to bad credentials (Do you have the right scope for your access token?).
+
+
+//Add settings option (or under launch menu tile?) to auto launch bot on app start
+
+//Add a leaderboard for number of 1st redeems per person
 
 
 
@@ -142,6 +139,7 @@ namespace TwitchBot
         private Dictionary<string, int> rouletteLeaderboard;
 
         private readonly string ROULETTEJSONFILENAME = @"rouletteleaderboard.json";
+        private static readonly string FIRSTREDEEMSJSONFILENAME = @"firstredeemsleaderboard.json";
 
         //API Ninja
         private static HttpClient NinjaAPIConnection { get; set; }
@@ -169,7 +167,7 @@ namespace TwitchBot
         //Bot Commands
         readonly Dictionary<string, string> CommandsStaticResponses = new Dictionary<string, string>
         {
-            { "commands", "The current chat commands are: help, about, discord, twitter, lurk, joke, fact, roll, roulette, and rouletteleaderboard" },
+            { "commands", "The current chat commands are: help, about, discord, twitter, lurk, joke, fact, roll, roulette, rouletteleaderboard, and 1st" },
             { "about", "Hello! I'm TheCakeIsAPie__ and I'm a Canadian variety streamer. We play a bunch of stuff over here in this small corner of the internet. Come pop a seat and have fun watching the shenanigans!"},
             { "discord", "Join the discord server at: https://discord.gg/uzHqnxKKkC"},
             { "twitter", "Follow me on Twitter at: https://twitter.com/TheCakeIsAPi"},
@@ -733,6 +731,8 @@ namespace TwitchBot
                                 case "lurk":
                                 case "fact":
                                 case "joke":
+                                case "1st":
+                                case "first":
                                     _TwitchClient.SendReply(TwitchChannelName,
                                         e.Command.ChatMessage.Id,
                                         "Enter \"!" + helpSpecifier + "\" and I'll do all the rest");
@@ -971,6 +971,39 @@ namespace TwitchBot
                         _TwitchClient.SendReply(TwitchChannelName,
                             e.Command.ChatMessage.Id,
                             leaderboardOutput);
+                    }
+                }
+                if (commandText.Equals("first") || commandText.Equals("1st"))
+                {
+                    Dictionary<string, int> firstRedeemLeaderboard = null;
+                    try
+                    {
+                        string firstRedeemJsonInput = File.ReadAllText(FIRSTREDEEMSJSONFILENAME);
+
+                        var deserializedLeaderboard = JsonConvert.DeserializeObject<Dictionary<string, int>>(firstRedeemJsonInput);
+                        if (deserializedLeaderboard == null)
+                            Log($"FirstRedeem leaderboard was empty when trying to read user scores");
+                        else
+                            firstRedeemLeaderboard = deserializedLeaderboard;
+                    }
+                    catch (Exception except)
+                    {
+                        WPFUtility.WriteToLog($"Read from first redeem leaderboard JSON error: {except.Message}");
+                        return;
+                    }
+
+                    if(firstRedeemLeaderboard != null)
+                    {
+                        string username = e.Command.ChatMessage.DisplayName;
+
+                        if(firstRedeemLeaderboard.ContainsKey(username))
+                            _TwitchClient.SendReply(TwitchChannelName,
+                                e.Command.ChatMessage.Id,
+                                $"{username} has been first {firstRedeemLeaderboard[username]} time(s)!");
+                        else
+                            _TwitchClient.SendReply(TwitchChannelName,
+                                e.Command.ChatMessage.Id,
+                                $"{username} hasn't been first before.");
                     }
                 }
                 //

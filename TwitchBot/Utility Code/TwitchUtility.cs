@@ -1,6 +1,8 @@
-﻿using OBSWebsocketDotNet.Types;
+﻿using Newtonsoft.Json;
+using OBSWebsocketDotNet.Types;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,6 +15,9 @@ namespace TwitchBot.Utility_Code
 {
     class TwitchUtility
     {
+        private static readonly string FIRSTREDEEMSJSONFILENAME = @"firstredeemsleaderboard.json";
+
+
         async static Task CheckAccessToken()
         {
             //Log("Checking AccessToken...");
@@ -143,6 +148,53 @@ namespace TwitchBot.Utility_Code
             Thread.Sleep(threadSleepLength);
             WPFUtility.WriteToLog("PubSub_OnCommercial: Ads have finished");
             //GlobalObjects._TwitchClient.SendMessage(GlobalObjects.TwitchChannelName, "Ad break is now done!");
+        }
+
+        static public void FirstRedeem(ChannelPointsCustomRewardRedemption e)
+        {
+            Dictionary<string, int> firstRedeemLeaderboard;
+            try
+            {
+                string firstRedeemJsonInput = File.ReadAllText(FIRSTREDEEMSJSONFILENAME);
+
+                var deserializedLeaderboard = JsonConvert.DeserializeObject<Dictionary<string, int>>(firstRedeemJsonInput);
+                if (deserializedLeaderboard == null)
+                    firstRedeemLeaderboard =  new Dictionary<string, int>();
+                else
+                    firstRedeemLeaderboard =  deserializedLeaderboard;
+            }
+            catch (Exception except)
+            {
+                WPFUtility.WriteToLog($"Read from first redeem leaderboard JSON error: {except.Message}");
+                return;
+            }
+
+            //update leaderboard 
+            if (firstRedeemLeaderboard.ContainsKey(e.UserName))
+                firstRedeemLeaderboard[e.UserName]++;
+            else
+                firstRedeemLeaderboard.Add(e.UserName, 1);
+
+
+            //check in case no update occurs
+            if (firstRedeemLeaderboard == null)
+            {
+                WPFUtility.WriteToLog($"firstRedeemLeaderboard was null when trying to save to file");
+                return;
+            }
+
+            //save to .json file
+            try
+            {
+                var firstRedeemJson = JsonConvert.SerializeObject(firstRedeemLeaderboard);
+
+                System.IO.File.WriteAllText(FIRSTREDEEMSJSONFILENAME, firstRedeemJson);
+            }
+            catch(Exception except)
+            {
+                WPFUtility.WriteToLog($"rouletteLeaderboard error while saving to file - {except.Message}");
+                return;
+            }
         }
     }
 }

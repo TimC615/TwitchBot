@@ -118,6 +118,10 @@ namespace TwitchBot
                 case "tts (normal speech rate)":
                     TwitchUtility.TtsRedeem(pointsRedemption, SpeechSynthesis.SPEECHSYNTH_RATE);
                     break;
+
+                case "1st":
+                    TwitchUtility.FirstRedeem(pointsRedemption);
+                    break;
             }
         }
         
