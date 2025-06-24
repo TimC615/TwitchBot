@@ -32,9 +32,8 @@ namespace TwitchBot
         private static readonly string FIRSTREDEEMSJSONFILENAME = @"firstredeemsleaderboard.json";
         private readonly string ROULETTEJSONFILENAME = @"rouletteleaderboard.json";
 
-        readonly Dictionary<string, string> CommandsStaticResponses = new Dictionary<string, string>
+        Dictionary<string, string> CommandsStaticResponses = new Dictionary<string, string>
         {
-            { "commands", "The current chat commands are: help, about, discord, twitter, lurk, joke, fact, roll, roulette, rouletteleaderboard, and 1st" },
             { "about", "Hello! I'm TheCakeIsAPie__ and I'm a Canadian variety streamer. We play a bunch of stuff over here in this small corner of the internet. Come pop a seat and have fun watching the shenanigans!"},
             { "discord", "Join the discord server at: https://discord.gg/uzHqnxKKkC"},
             { "twitter", "Follow me on Twitter at: https://twitter.com/TheCakeIsAPi"},
@@ -72,6 +71,15 @@ namespace TwitchBot
             //more complex comands
             else
             {
+                //return list of current bot commands (added different command to avoid also showing commands for other Twitch bots)
+                if(commandText.Equals("commands") || commandText.Equals("botmenu"))
+                {
+                    _TwitchClient.SendReply(TwitchChannelName,
+                            e.ChatMessage.Id,
+                            "The current chat commands are: help, about, discord, twitter, lurk, joke, fact, roll, roulette, rouletteleaderboard, and 1st");
+                }
+
+
                 //Tells user how to use commands
                 if (commandText.Equals("help"))
                     HelpCommands(e);
