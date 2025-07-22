@@ -41,12 +41,6 @@ using TwitchBot.Utility_Code;
 //could be fun to have a twitch extension (or simply apply based on role of user) to add a border or effect to talking head
 
 
-//look into purposefully making jarbled sound alert sounds. current theory is running obs websocket through port 4455 conflicts with sound alerts
-//might need to temporarily open an obs websocket on port 4455, run sound alert, and close websocket
-//NEW ERROR IDEA: could be caused by enabling the "control audio via OBS" checkbox in the SoundAlerts properties
-
-
-
 //look into feature that allows user to add static chat commands during run time
 //(would probably need to implement a dictionary stored in a text file. key<string> = chat command [!command]   value<string> = static string to write to chat log)
 

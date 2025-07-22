@@ -31,6 +31,8 @@ namespace TwitchBot
             TwitchAPIClientSecretTextBox.Text = Properties.Settings.Default.clientsecret;
 
             OBSWebSocketAuthTextBox.Text = Properties.Settings.Default.OBSWebSocketAuth;
+            OBSWebcamSceneIDTextBox.Text = Properties.Settings.Default.OBSWebcamSceneID;
+            OBSReactiveImageSceneIDTextBox.Text = Properties.Settings.Default.OBSReactiveImageSceneID;
 
             APINinjaKeyTextBox.Text = Properties.Settings.Default.APINinjaKey;
         }
@@ -70,6 +72,8 @@ namespace TwitchBot
                 Properties.Settings.Default.clientsecret = TwitchAPIClientSecretTextBox.Text;
 
                 Properties.Settings.Default.OBSWebSocketAuth = OBSWebSocketAuthTextBox.Text;
+                Properties.Settings.Default.OBSWebcamSceneID = OBSWebcamSceneIDTextBox.Text;
+                Properties.Settings.Default.OBSReactiveImageSceneID = OBSReactiveImageSceneIDTextBox.Text;
 
                 Properties.Settings.Default.APINinjaKey = APINinjaKeyTextBox.Text;
 

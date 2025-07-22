@@ -18,7 +18,7 @@
 
                     <StackPanel Name="TwitchAPIClientSecretStack" Orientation="Horizontal">
                         <Label Content="Twitch API Client Secret:" VerticalAlignment="Center"/>
-                        <TextBox Name="TwitchAPIClientSecretTextBox" TextWrapping="Wrap" Text="client seret" Width="218" VerticalAlignment="Center"/>
+                        <TextBox Name="TwitchAPIClientSecretTextBox" TextWrapping="Wrap" Text="client secret" Width="218" VerticalAlignment="Center"/>
                     </StackPanel>
                     <Label Name="TwitchAPIClientSecretErrorMessage" Content="Client Secret is required to run application" Foreground="Red" IsEnabled="False" Visibility="Collapsed"/>
                 </StackPanel>
@@ -26,9 +26,21 @@
                 <Separator Margin="10,5,10,5" Width="Auto"/>
 
                 <Expander Name="OBSWebsocketExpander" Height="Auto" Header="OBS WebSocket" HorizontalAlignment="Left">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="30,0,0,0">
-                        <Label Content="Auth:" VerticalAlignment="Center"/>
-                        <TextBox Name="OBSWebSocketAuthTextBox" TextWrapping="Wrap" Text="websocket auth" Width="142" VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Vertical" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="30,0,0,0">
+                            <Label Content="Auth:" VerticalAlignment="Center"/>
+                            <TextBox Name="OBSWebSocketAuthTextBox" TextWrapping="Wrap" Text="websocket auth" Width="142" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <StackPanel Name="OBSWebcamSceneIDStack" Orientation="Horizontal" Margin="30,0,0,0">
+                            <Label Content="Webcam Scene ID:" VerticalAlignment="Center"/>
+                            <TextBox Name="OBSWebcamSceneIDTextBox" TextWrapping="Wrap" Text="webcam scene ID" Width="218" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <StackPanel Name="OBSReactiveImageSceneIDStack" Orientation="Horizontal" Margin="30,0,0,0">
+                            <Label Content="Reactive Image Scene ID:" VerticalAlignment="Center"/>
+                            <TextBox Name="OBSReactiveImageSceneIDTextBox" TextWrapping="Wrap" Text="reactive image scene ID" Width="218" VerticalAlignment="Center"/>
+                        </StackPanel>
                     </StackPanel>
                 </Expander>
 
