@@ -58,6 +58,10 @@ namespace TwitchBot
         {
             string commandText = e.CommandText.ToLower();
 
+            //helps avoid firing unnecessarily when streaming with others using linked chats (must be in bot's stream to trigger chat commands)
+            if (e.ChatMessage.Channel != GlobalObjects.TwitchChannelName)
+                return;
+
             //2 ways to deal with commands: if/switch statements OR dictionary lookups
 
             //responses are added to dictionary in lowercase
