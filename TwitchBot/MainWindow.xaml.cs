@@ -138,9 +138,6 @@ namespace TwitchBot
 
         //OBS Websocket
         protected OBSWebsocket obs;
-        private string ttsSceneName;
-        private SceneItemDetails ttsSceneItem;
-        public readonly string TTSTalkingHeadName = GlobalObjects.ObsTtsTalkingHeadName;
 
         //Cached Variables
         //private string CachedOwnerOfChannelAccessToken = "needsaccesstoken"; //cached due to potentially being needed for API requests
@@ -150,7 +147,6 @@ namespace TwitchBot
 
         //Trigger variables
         public static bool twitchPlaysEnable = false;
-        private bool obsConnected = false;
 
         //Other Objects
         TwitchPlays TwitchPlaysObj;    //only gets an object when TwitchPlays is enabled
@@ -459,6 +455,8 @@ namespace TwitchBot
         //Ensures connections to APIs and local web server is closed when exiting application
         protected void MainWindow_Closing(object sender, EventArgs e)
         {
+            if(_TwitchAPI != null)
+            {
             try
             {   //updates list of subscribed api events to iterate through and close. probably not needed (leave open and let erode after enough time) but feels nice to do this
                 GlobalObjects.EventSubSubscribedEvents = _TwitchAPI.Helix.EventSub.GetEventSubSubscriptionsAsync().Result.Subscriptions;
@@ -470,6 +468,7 @@ namespace TwitchBot
             catch (Exception mainWindowCloseExcept)
             {
                 Log($"Exception when closing application: {mainWindowCloseExcept.Message}");
+            }
             }
 
             CloseEverything();
@@ -486,7 +485,6 @@ namespace TwitchBot
         {
             InitializeWebServer();
 
-            //var authUrl = $"https://id.twitch.tv/oauth2/authorize?response_type=code&client_id={{ClientId}}&redirect_uri={{RedirectUri}}&scope={{String.Join("+", Scopes)}}";
             var authUrl = "https://id.twitch.tv/oauth2/authorize?response_type=code&client_id=" +
                 ClientId + "&redirect_uri=" + RedirectUri + "&scope=" + String.Join("+", Scopes);
 
@@ -570,8 +568,15 @@ namespace TwitchBot
             _SpeechSynth = SpeechSynthesis.GetInstance();
             GlobalObjects.botIsActive = true;
 
+            try
+            {
             System.Media.SoundPlayer botStartup = new System.Media.SoundPlayer("C:\\Users\\timot\\source\\repos\\TwitchBot\\Bot startup sound.wav");
             botStartup.Play();
+        }
+            catch(Exception except)
+            {
+                Log($"Error when playing bot startup sound: {except.Message}");
+            }
         }
 
         async Task SetNameAndIdByOauthedUser(string accessToken)
@@ -657,11 +662,26 @@ namespace TwitchBot
             obs.Connected += Obs_onConnect;
             obs.Disconnected += Obs_onDisconnect;
 
+            try
+            {
             //setting port to 4455 conflicts with Sound Alerts. creates jarbled mess of the incoming sound bites
-            obs.ConnectAsync("ws://192.168.2.22:49152", Properties.Settings.Default.OBSWebSocketAuth);
+                obs.ConnectAsync(
+                    $"ws://{Properties.Settings.Default.OBSServerIP}:{Properties.Settings.Default.OBSServerPort}", 
+                    Properties.Settings.Default.OBSWebSocketAuth);
 
             //OBSWebsocketDotNet method documentation available at:
             //https://github.com/BarRaider/obs-websocket-dotnet/blob/master/obs-websocket-dotnet/OBSWebsocket_Requests.cs
+        }
+            catch (Exception ex)
+            {
+                Log($"Error when connecting to OBS WebSocket: {ex.Message}");
+
+                //make it so user can retry the connection
+                Dispatcher.BeginInvoke(new Action(() => {
+                    ConnectOBS.IsEnabled = true;
+                    DisconnectOBS.IsEnabled = false;
+                }));
+            }
         }
         //
         //----------------------End of Initialization Methods----------------------
@@ -736,7 +756,6 @@ namespace TwitchBot
         private void Obs_onConnect(object sender, EventArgs e)
         {
             Log("OBS connected");
-            obsConnected = true;
 
             Dispatcher.BeginInvoke(new Action(() => {
                 ConnectOBS.IsEnabled = false;
@@ -746,8 +765,6 @@ namespace TwitchBot
 
         private void Obs_onDisconnect(object sender, OBSWebsocketDotNet.Communication.ObsDisconnectionInfo e)
         {
-            obsConnected = false;
-
             //Allows for more descriptive error message in cases where OBS isn't running. Normally would output "Unknown reason"
             if (Process.GetProcessesByName("obs64").Length == 0)
             {
