@@ -92,8 +92,7 @@ namespace TwitchBot
                         {
                             try
                             {
-                                bool deleteSubResult = await 
-                                    .Helix.EventSub.DeleteEventSubSubscriptionAsync(subscription.Id);
+                                bool deleteSubResult = await _TwitchAPI.Helix.EventSub.DeleteEventSubSubscriptionAsync(subscription.Id);
 
                                 if (deleteSubResult)
                                 {

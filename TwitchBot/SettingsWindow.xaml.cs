@@ -71,6 +71,8 @@ namespace TwitchBot
                 Properties.Settings.Default.clientid = TwitchAPIClientIDTextBox.Text;
                 Properties.Settings.Default.clientsecret = TwitchAPIClientSecretTextBox.Text;
 
+                Properties.Settings.Default.OBSServerIP = OBSWebSocketServerIPTextBox.Text;
+                Properties.Settings.Default.OBSServerPort = OBSWebSocketServerPortTextBox.Text;
                 Properties.Settings.Default.OBSWebSocketAuth = OBSWebSocketAuthTextBox.Text;
                 Properties.Settings.Default.OBSWebcamSceneID = OBSWebcamSceneIDTextBox.Text;
                 Properties.Settings.Default.OBSReactiveImageSceneID = OBSReactiveImageSceneIDTextBox.Text;

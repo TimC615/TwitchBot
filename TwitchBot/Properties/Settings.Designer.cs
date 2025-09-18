@@ -130,5 +130,29 @@ namespace TwitchBot.Properties {
                 this["OBSReactiveImageSceneID"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string OBSServerIP {
+            get {
+                return ((string)(this["OBSServerIP"]));
+            }
+            set {
+                this["OBSServerIP"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string OBSServerPort {
+            get {
+                return ((string)(this["OBSServerPort"]));
+            }
+            set {
+                this["OBSServerPort"] = value;
+            }
+        }
     }
 }

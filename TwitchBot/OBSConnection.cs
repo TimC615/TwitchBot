@@ -1,4 +1,5 @@
-﻿using OBSWebsocketDotNet;
+﻿using Microsoft.VisualBasic.Logging;
+using OBSWebsocketDotNet;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -24,9 +25,19 @@ namespace TwitchBot
             _OBSWebsocket.Connected += OBS_onConnect;
             _OBSWebsocket.Disconnected += OBS_onDisconnect;
 
-            //setting port to 4455 conflicts with Sound Alerts. creates jarbled mess of the incoming sound bites
-            _OBSWebsocket.ConnectAsync("ws://192.168.2.22:49152", Properties.Settings.Default.OBSWebSocketAuth);
-
+            try
+            {
+                //setting port to 4455 conflicts with Sound Alerts. creates jarbled mess of the incoming sound bites
+                _OBSWebsocket.ConnectAsync(
+                    $"ws://{Properties.Settings.Default.OBSServerIP}:{Properties.Settings.Default.OBSServerPort}", 
+                    Properties.Settings.Default.OBSWebSocketAuth
+                    );
+            }
+            catch(Exception except)
+            {
+                WPFUtility.WriteToLog($"Error when connecting to OBS websocket: {except.Message}");
+            }
+            
             //OBSWebsocketDotNet method documentation available at:
             //https://github.com/BarRaider/obs-websocket-dotnet/blob/master/obs-websocket-dotnet/OBSWebsocket_Requests.cs
         }

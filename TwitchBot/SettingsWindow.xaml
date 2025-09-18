@@ -28,6 +28,16 @@
                 <Expander Name="OBSWebsocketExpander" Height="Auto" Header="OBS WebSocket" HorizontalAlignment="Left">
                     <StackPanel Orientation="Vertical" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="30,0,0,0">
+                            <Label Content="Server IP:" VerticalAlignment="Center"/>
+                            <TextBox Name="OBSWebSocketServerIPTextBox" TextWrapping="Wrap" Text="server ip" Width="142" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="30,0,0,0">
+                            <Label Content="Server Port:" VerticalAlignment="Center"/>
+                            <TextBox Name="OBSWebSocketServerPortTextBox" TextWrapping="Wrap" Text="server port number" Width="142" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="30,0,0,0">
                             <Label Content="Auth:" VerticalAlignment="Center"/>
                             <TextBox Name="OBSWebSocketAuthTextBox" TextWrapping="Wrap" Text="websocket auth" Width="142" VerticalAlignment="Center"/>
                         </StackPanel>
