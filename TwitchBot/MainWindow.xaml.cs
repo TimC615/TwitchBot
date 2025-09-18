@@ -21,6 +21,7 @@ using TwitchLib.Api.Helix.Models.Moderation.GetModerators;
 using TwitchLib.Api.Helix.Models.Moderation.GetBannedUsers;
 using TwitchLib.Api.Helix.Models.Streams.CreateStreamMarker;
 using TwitchBot.Utility_Code;
+using System.ComponentModel;
 
 //Base functionality taken from HonestDanGames' Youtube channel https://youtu.be/Ufgq6_QhVKw?si=QYBbDl0sYVCy3QVF
 //Provides networking functionality to connect program to Twitch, beginner understanding of setting up API event handlers,
@@ -107,7 +108,7 @@ namespace TwitchBot
         private readonly List<string> Scopes = new List<string>
         { "user:edit", "chat:read", "chat:edit", "channel:moderate", "bits:read",
             "channel:read:subscriptions", "user:read:email", "user:read:subscriptions", "channel:manage:redemptions",
-            "channel:edit:commercial", "channel:manage:ads", "user:read:email", "moderator:manage:banned_users",
+            "channel:edit:commercial", "channel:manage:ads", "moderator:manage:banned_users",
             "moderation:read", "channel:read:ads", "channel:manage:moderators"
         };      //find more Twitch API scopes at https://dev.twitch.tv/docs/authentication/scopes/
 
@@ -175,6 +176,7 @@ namespace TwitchBot
         public MainWindow()
         {
             InitializeComponent();
+            //this.Closing += MainWindow_Closing(object sender, CancelEventArgs e);
 
             AppWindow = this;   //sets object reference for code like UtilityCode.WPFUtility to access MainWindow elements from different locations
 
@@ -329,26 +331,12 @@ namespace TwitchBot
         async private void TestButton_Click(object sender, RoutedEventArgs e)
         {
             /*
-            Log("This is a test");
-            Log($"{DateTime.Now.TimeOfDay.Hours}:{DateTime.Now.TimeOfDay.Minutes}:{DateTime.Now.TimeOfDay.Seconds}");
-            Log($"{DateTime.Now.ToString("MMM")} {DateTime.Now.Day} {DateTime.Now.Year}   {DateTime.Now.TimeOfDay.Hours}:{DateTime.Now.TimeOfDay.Minutes}:{DateTime.Now.TimeOfDay.Seconds}");
-
-
-            CreateStreamMarkerRequest test = new CreateStreamMarkerRequest();
-
-            CreateStreamMarkerRequest markerRequest = new CreateStreamMarkerRequest();
-            markerRequest.UserId = TwitchChannelId;
-            markerRequest.Description = "Marker created through bot app";
-
-            _TwitchAPI.Helix.Streams.CreateStreamMarkerAsync(markerRequest);
-            */
-
-            //Log($"TEST - {_TwitchAPI.Settings.ClientId} vs {Properties.Settings.Default.clientid}");
-
             foreach(var window in Application.Current.Windows)
             {
                 Trace.WriteLine($"TEST - {window.GetType}");
             }
+            */
+
         }
 
         async private void TestModButton_Click(object sender, RoutedEventArgs e)
@@ -471,6 +459,19 @@ namespace TwitchBot
         //Ensures connections to APIs and local web server is closed when exiting application
         protected void MainWindow_Closing(object sender, EventArgs e)
         {
+            try
+            {   //updates list of subscribed api events to iterate through and close. probably not needed (leave open and let erode after enough time) but feels nice to do this
+                GlobalObjects.EventSubSubscribedEvents = _TwitchAPI.Helix.EventSub.GetEventSubSubscriptionsAsync().Result.Subscriptions;
+            }
+            catch (AggregateException)
+            {
+                Log("Exception when closing application: AggregateException");
+            }
+            catch (Exception mainWindowCloseExcept)
+            {
+                Log($"Exception when closing application: {mainWindowCloseExcept.Message}");
+            }
+
             CloseEverything();
         }
         //
@@ -927,8 +928,6 @@ namespace TwitchBot
         {
             if (_TwitchClient != null)
             {
-                GlobalObjects.EventSubSubscribedEvents = _TwitchAPI.Helix.EventSub.GetEventSubSubscriptionsAsync().Result.Subscriptions;
-
                 _TwitchClient.Disconnect();
             }
 
