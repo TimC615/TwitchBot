@@ -39,7 +39,11 @@
                     <MenuItem Name="ConnectOBS" Header="_Connect OBS" HorizontalAlignment="Left" IsEnabled="False" Click="ConnectOBSMenuItem_Click"/>
                     <MenuItem Name="DisconnectOBS" Header="_Disconnect OBS" HorizontalAlignment="Left" IsEnabled="False" Click="DisconnectOBSMenuItem_Click"/>
                 </MenuItem>
-                
+
+                <MenuItem Header="_Chat Commands">
+                    <MenuItem Name="ShowRouletteSuccess" Header="_Display Roulette Success Message" HorizontalAlignment="Left" IsCheckable="True" Checked="ShowRouletteSuccessMenuItem_Checked" Unchecked="ShowRouletteSuccessMenuItem_Unchecked"/>
+                </MenuItem>
+
                 <MenuItem Header="_Advanced">
                     <MenuItem Name="CheckCurrentAccessToken" Header="_Check Access Token" HorizontalAlignment="Left" IsEnabled="False" Click="CheckAccessTokenMenuItem_Click"/>
                 </MenuItem>

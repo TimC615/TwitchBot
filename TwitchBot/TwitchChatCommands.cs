@@ -289,10 +289,14 @@ namespace TwitchBot
                     int rouletteLeaderboardCount = MainWindow.rouletteLeaderboard[e.ChatMessage.Username];
 
 
-                    _TwitchClient.SendReply(TwitchChannelName,
+                    //helps to avoid spamming the chat if roulette command is too popular
+                    if (Properties.Settings.Default.DisplayRouletteSuccessMessage)
+                    {
+                        _TwitchClient.SendReply(TwitchChannelName,
                         e.ChatMessage.Id,
                         $"{e.ChatMessage.DisplayName} has survived the timeout roulette {rouletteLeaderboardCount} time(s)");
-
+                    }
+                    
                     SaveRouletteLeaderboardToJson();
                 }
             }

@@ -82,6 +82,13 @@ _TwitchAPI.Helix.Streams.CreateStreamMarkerAsync(markerRequest);
 //BadScopeException: Your request was blocked due to bad credentials (Do you have the right scope for your access token?).
 
 
+
+//Borks itself when losing internet connection (i believe it's from not having a channel being watched?)
+
+
+//look into making bot messages (especially the ads have started messages) viewable only on host channel
+//  don't want to spam shared chat feed with random bot stuff
+
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
 {
@@ -121,6 +128,8 @@ namespace TwitchBot
         private TwitchClient _TwitchClient;
         private TwitchAPI _TwitchAPI;
         //Look for EventSub events in "WebsocketHostedServices.cs". Handles things like points redeems and ad break triggers.
+
+        private readonly string BOTNAME = "CakeBot___";
 
         private TwitchChatCommands _TwitchChatCommands;
 
@@ -324,6 +333,18 @@ namespace TwitchBot
             _TwitchAPI.Helix.Streams.CreateStreamMarkerAsync(markerRequest);
         }
 
+        private void ShowRouletteSuccessMenuItem_Checked(object sender, RoutedEventArgs e)
+        {
+            Properties.Settings.Default.DisplayRouletteSuccessMessage = true;
+            Properties.Settings.Default.Save();
+        }
+
+        private void ShowRouletteSuccessMenuItem_Unchecked(object sender, RoutedEventArgs e)
+        {
+            Properties.Settings.Default.DisplayRouletteSuccessMessage = false;
+            Properties.Settings.Default.Save();
+        }
+
         async private void TestButton_Click(object sender, RoutedEventArgs e)
         {
             /*
@@ -333,6 +354,24 @@ namespace TwitchBot
             }
             */
 
+            GetUsersResponse test1 = await _TwitchAPI.Helix.Users.GetUsersAsync();
+            foreach(var user1 in test1.Users)
+            {
+                Log($"TEST1: {user1.DisplayName}\t{user1.Login}\t{user1.Id}");
+            }
+
+            GetUsersResponse test2 = await _TwitchAPI.Helix.Users.GetUsersAsync(logins: new List<string>(new string[] {BOTNAME}));
+            foreach (var user1 in test2.Users)
+            {
+                Log($"TEST2: {user1.DisplayName}\t{user1.Login}\t{user1.Id}");
+            }
+
+            foreach (var joinedChannel in _TwitchClient.JoinedChannels)
+            {
+                Log($"Channel: {joinedChannel.Channel}\t{joinedChannel.ChannelState}");
+            }
+
+            Log($"{_TwitchClient.TwitchUsername}");
         }
 
         async private void TestModButton_Click(object sender, RoutedEventArgs e)
@@ -457,18 +496,18 @@ namespace TwitchBot
         {
             if(_TwitchAPI != null)
             {
-            try
-            {   //updates list of subscribed api events to iterate through and close. probably not needed (leave open and let erode after enough time) but feels nice to do this
-                GlobalObjects.EventSubSubscribedEvents = _TwitchAPI.Helix.EventSub.GetEventSubSubscriptionsAsync().Result.Subscriptions;
-            }
-            catch (AggregateException)
-            {
-                Log("Exception when closing application: AggregateException");
-            }
-            catch (Exception mainWindowCloseExcept)
-            {
-                Log($"Exception when closing application: {mainWindowCloseExcept.Message}");
-            }
+                try
+                {   //updates list of subscribed api events to iterate through and close. probably not needed (leave open and let erode after enough time) but feels nice to do this
+                    GlobalObjects.EventSubSubscribedEvents = _TwitchAPI.Helix.EventSub.GetEventSubSubscriptionsAsync().Result.Subscriptions;
+                }
+                catch (AggregateException)
+                {
+                    Log("Exception when closing application: AggregateException");
+                }
+                catch (Exception mainWindowCloseExcept)
+                {
+                    Log($"Exception when closing application: {mainWindowCloseExcept.Message}");
+                }
             }
 
             CloseEverything();
@@ -521,6 +560,11 @@ namespace TwitchBot
 
             //testing button
             TestButton.IsEnabled = true;
+
+            if (Properties.Settings.Default.DisplayRouletteSuccessMessage)
+                ShowRouletteSuccess.IsChecked = true;
+            else
+                ShowRouletteSuccess.IsChecked = false;
         }
 
         void InitializeWebServer()
@@ -570,9 +614,9 @@ namespace TwitchBot
 
             try
             {
-            System.Media.SoundPlayer botStartup = new System.Media.SoundPlayer("C:\\Users\\timot\\source\\repos\\TwitchBot\\Bot startup sound.wav");
-            botStartup.Play();
-        }
+                System.Media.SoundPlayer botStartup = new System.Media.SoundPlayer("C:\\Users\\timot\\source\\repos\\TwitchBot\\Bot startup sound.wav");
+                botStartup.Play();
+            }
             catch(Exception except)
             {
                 Log($"Error when playing bot startup sound: {except.Message}");
@@ -664,14 +708,14 @@ namespace TwitchBot
 
             try
             {
-            //setting port to 4455 conflicts with Sound Alerts. creates jarbled mess of the incoming sound bites
+                //setting port to 4455 conflicts with Sound Alerts. creates jarbled mess of the incoming sound bites
                 obs.ConnectAsync(
                     $"ws://{Properties.Settings.Default.OBSServerIP}:{Properties.Settings.Default.OBSServerPort}", 
                     Properties.Settings.Default.OBSWebSocketAuth);
 
-            //OBSWebsocketDotNet method documentation available at:
-            //https://github.com/BarRaider/obs-websocket-dotnet/blob/master/obs-websocket-dotnet/OBSWebsocket_Requests.cs
-        }
+                //OBSWebsocketDotNet method documentation available at:
+                //https://github.com/BarRaider/obs-websocket-dotnet/blob/master/obs-websocket-dotnet/OBSWebsocket_Requests.cs
+            }
             catch (Exception ex)
             {
                 Log($"Error when connecting to OBS WebSocket: {ex.Message}");
