@@ -48,27 +48,9 @@ using System.ComponentModel;
 
 //see if toggling enabled points redeems is possible
 
-
-//look into only connecting to obs websocket when needed (maybe to avoid borking sound alerts????)
-
-
-//possibly provide functionality for pressing a key/key combo to put a marker in current twitch stream
-/*
-CreateStreamMarkerRequest markerRequest = new CreateStreamMarkerRequest();
-markerRequest.UserId = TwitchChannelId;
-
-_TwitchAPI.Helix.Streams.CreateStreamMarkerAsync(markerRequest);
-*/
-
-
-//Move handling of chat commands, points redeems, and ad breaks to new classes to clean up code
-//Link the starting of EventSub websocket code to user pressing "start bot" WPF button
+//Link the starting of EventSub websocket code to user pressing "start bot" WPF button (still not sure how to do this as it's in dependancy injection)
 
 //Can move APINinja code to it's own singleton class
-
-
-//timeout roulette calculations: (current record number of spins * 30 seconds) (maybe logarithmic curve?) (some sort of curve)
-//start at a flat 30 seconds
 
 
 

@@ -89,7 +89,8 @@ namespace TwitchBot
                     HelpCommands(e);
 
                 //roll a random dX sided die
-                if (commandText.Contains("roll", StringComparison.OrdinalIgnoreCase))
+                //command text only looks for the first word after the ! so it automatically ignores additional chars after command
+                if (commandText.Equals("roll"))
                 {
                     if(e.ArgumentsAsList.Count >= 1)
                     {
@@ -130,7 +131,23 @@ namespace TwitchBot
                 //Random chance for user to time themself out. If user has roles, automatically re-apply once timeout is done
                 if (commandText.Equals("roulette"))
                 {
-                    RouletteCommand(e);
+                    
+                    //Spin the wheel x times (default is once)
+                    if (e.ArgumentsAsList.Count == 0)
+                        RouletteCommand(e);
+                    else
+                    {
+                        try
+                        {
+                            int totalSpins = Int32.Parse(e.ArgumentsAsList[0]);
+                            RouletteCommand(e, totalSpins);
+                        }
+                        catch(Exception)
+                        {
+                            WPFUtility.WriteToLog($"Exception parsing number for custom roulette spins. Defaulting to 1.");
+                            RouletteCommand(e);
+                        }
+                    }
                 }
 
                 //Displays a list of the chatters with the most timeout roulette spins without a timeout
@@ -138,6 +155,7 @@ namespace TwitchBot
                 {
                     RouletteLeaderboardCommand(e);
                 }
+
 
                 if (commandText.Equals("first") || commandText.Equals("1st"))
                 {
@@ -192,7 +210,7 @@ namespace TwitchBot
                             case "roulette":
                                 _TwitchClient.SendReply(TwitchChannelName,
                                     e.ChatMessage.Id,
-                                    "Enter \"!roulette\" for a chance to time yourself out for " + TIMEOUTROULETTELENGTH + " seconds");
+                                    "Enter \"!roulette\" for a chance to time yourself out for " + TIMEOUTROULETTELENGTH + " seconds or add a number afterwards to roll multiple times in a row!");
                                 break;
                             case "rouletteleaderboard":
                                 _TwitchClient.SendReply(TwitchChannelName,
@@ -210,7 +228,7 @@ namespace TwitchBot
                 }
         }
 
-        async void RouletteCommand(TwitchLib.Client.Models.ChatCommand e)
+        void RouletteCommand(TwitchLib.Client.Models.ChatCommand e, int totalSpins = 1)
         {
             try
             {
@@ -226,83 +244,89 @@ namespace TwitchBot
                     throw new Exception("User tried to timeout as restricted role");
                 }
 
-                //1 in 10 chance 
-                if (random.Next(1, 11) == 1)
+                for (int spin = 1; spin <= totalSpins; spin++)
                 {
-                    MainWindow.rouletteLeaderboard = GetRouletteLeaderboardFromJson();
-
-                    await TwitchUtility.CheckAccessToken();
-
-                    bool isMod = false;
-                    if (e.ChatMessage.IsModerator)
-                        isMod = true;
-
-
-
-                    int leaderboardSpins = 0;
-                    if (MainWindow.rouletteLeaderboard.ContainsKey(e.ChatMessage.Username))
+                    if (random.Next(1, 11) == 1)
                     {
-                        leaderboardSpins = MainWindow.rouletteLeaderboard[e.ChatMessage.Username];
-                        MainWindow.rouletteLeaderboard.Remove(e.ChatMessage.Username);
+                        RouletteTimeout(e, totalSpins * TIMEOUTROULETTELENGTH);
+                        return;
                     }
+                }
 
-                    string timeoutRouletteMessage = $"Congrats {e.ChatMessage.DisplayName}! You won the roulette and timed yourself out after surviving {leaderboardSpins} spins!";
-                    _TwitchClient.SendReply(TwitchChannelName,
-                        e.ChatMessage.Id,
-                        timeoutRouletteMessage);
-
-                    //ban info for current user
-                    BanUserRequest request = new BanUserRequest();
-                    request.UserId = e.ChatMessage.UserId;
-                    request.Reason = "Congrats! You won the timeout roulette!";
-                    request.Duration = TIMEOUTROULETTELENGTH;
-
-                    //add specific channel and acting moderator info to current user ban info
-                    BanUserResponse result = _TwitchAPI.Helix.Moderation.BanUserAsync(
-                        TwitchChannelId,
-                        TwitchChannelId,
-                        request
-                        ).Result;
-
-                    //Log("Roulette result: " + result.Data);
-
-                    SaveRouletteLeaderboardToJson();
-
-                    if (isMod)
-                    {
-                        new Thread(delegate ()
-                        {
-                            TwitchUtility.ReinstateModRole(_TwitchAPI, TwitchChannelId, e.ChatMessage.UserId, e.ChatMessage.Username, TIMEOUTROULETTELENGTH);
-                        }).Start();
-                    }
+                //only reaches here if user succeeds all roulette spins
+                //check if user is in leaderboard already
+                if (MainWindow.rouletteLeaderboard.ContainsKey(e.ChatMessage.Username))
+                {
+                    MainWindow.rouletteLeaderboard[e.ChatMessage.Username] += totalSpins;
                 }
                 else
+                    MainWindow.rouletteLeaderboard.Add(e.ChatMessage.Username, 1);
+
+                int rouletteLeaderboardCount = MainWindow.rouletteLeaderboard[e.ChatMessage.Username];
+
+
+                //helps to avoid spamming the chat if roulette command is too popular
+                if (Properties.Settings.Default.DisplayRouletteSuccessMessage)
                 {
-                    //check if user is in leaderboard already
-                    if (MainWindow.rouletteLeaderboard.ContainsKey(e.ChatMessage.Username))
-                    {
-                        MainWindow.rouletteLeaderboard[e.ChatMessage.Username]++;
-                    }
-                    else
-                        MainWindow.rouletteLeaderboard.Add(e.ChatMessage.Username, 1);
-
-                    int rouletteLeaderboardCount = MainWindow.rouletteLeaderboard[e.ChatMessage.Username];
-
-
-                    //helps to avoid spamming the chat if roulette command is too popular
-                    if (Properties.Settings.Default.DisplayRouletteSuccessMessage)
-                    {
-                        _TwitchClient.SendReply(TwitchChannelName,
-                        e.ChatMessage.Id,
-                        $"{e.ChatMessage.DisplayName} has survived the timeout roulette {rouletteLeaderboardCount} time(s)");
-                    }
-                    
-                    SaveRouletteLeaderboardToJson();
+                    _TwitchClient.SendReply(TwitchChannelName,
+                    e.ChatMessage.Id,
+                    $"{e.ChatMessage.DisplayName} has survived the timeout roulette {rouletteLeaderboardCount} time(s)");
                 }
+
+                SaveRouletteLeaderboardToJson();
             }
             catch (Exception except)
             {
                 WPFUtility.WriteToLog("Roulette Exception: " + except.Message);
+            }
+        }
+
+        async void RouletteTimeout(TwitchLib.Client.Models.ChatCommand e, int timeoutLength)
+        {
+            MainWindow.rouletteLeaderboard = GetRouletteLeaderboardFromJson();
+
+            await TwitchUtility.CheckAccessToken();
+
+            int leaderboardSpins = 0;
+            if (MainWindow.rouletteLeaderboard.ContainsKey(e.ChatMessage.Username))
+            {
+                leaderboardSpins = MainWindow.rouletteLeaderboard[e.ChatMessage.Username];
+                MainWindow.rouletteLeaderboard.Remove(e.ChatMessage.Username);
+            }
+
+            string timeoutRouletteMessage = "";
+            if(leaderboardSpins == 0)
+                timeoutRouletteMessage = $"{e.ChatMessage.DisplayName} won the roulette and timed themselves out for {timeoutLength} seconds after surviving {leaderboardSpins} spins!";
+            else
+                timeoutRouletteMessage = $"{e.ChatMessage.DisplayName} won the roulette and timed themselves out for {timeoutLength} seconds on their first spin!";
+
+            _TwitchClient.SendReply(TwitchChannelName,
+                e.ChatMessage.Id,
+                timeoutRouletteMessage);
+
+            //ban info for current user
+            BanUserRequest request = new BanUserRequest();
+            request.UserId = e.ChatMessage.UserId;
+            request.Reason = "Congrats! You won the timeout roulette!";
+            request.Duration = timeoutLength;
+
+            //add specific channel and acting moderator info to current user ban info
+            BanUserResponse result = _TwitchAPI.Helix.Moderation.BanUserAsync(
+                TwitchChannelId,
+                TwitchChannelId,
+                request
+                ).Result;
+
+            //Log("Roulette result: " + result.Data);
+
+            SaveRouletteLeaderboardToJson();
+
+            if (e.ChatMessage.IsModerator)
+            {
+                new Thread(delegate ()
+                {
+                    TwitchUtility.ReinstateModRole(_TwitchAPI, TwitchChannelId, e.ChatMessage.UserId, e.ChatMessage.Username, TIMEOUTROULETTELENGTH);
+                }).Start();
             }
         }
 
