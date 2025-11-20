@@ -28,6 +28,7 @@ namespace TwitchBot
 
         private static readonly int TIMEOUTROULETTELENGTH = 30;      //timeout length, in seconds
         private static readonly int TIMEOUTROULETTETOPPOSITIONSTODISPLAY = 3;   //used to determine max number of results to show for leaderboard display
+        private static readonly int MAXTIMEOUTTIMEALLOWED = 1209600;    //maximum time allowed to time someone out through the Twitch API
 
         private static readonly string FIRSTREDEEMSJSONFILENAME = @"firstredeemsleaderboard.json";
         private readonly string ROULETTEJSONFILENAME = @"rouletteleaderboard.json";
@@ -248,7 +249,10 @@ namespace TwitchBot
                 {
                     if (random.Next(1, 11) == 1)
                     {
-                        RouletteTimeout(e, totalSpins * TIMEOUTROULETTELENGTH);
+                        if (totalSpins * TIMEOUTROULETTELENGTH > MAXTIMEOUTTIMEALLOWED)
+                            RouletteTimeout(e, MAXTIMEOUTTIMEALLOWED);
+                        else
+                            RouletteTimeout(e, totalSpins * TIMEOUTROULETTELENGTH);
                         return;
                     }
                 }
