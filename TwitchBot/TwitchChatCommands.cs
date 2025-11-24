@@ -141,7 +141,11 @@ namespace TwitchBot
                         try
                         {
                             int totalSpins = Int32.Parse(e.ArgumentsAsList[0]);
-                            RouletteCommand(e, totalSpins);
+
+                            if (totalSpins < 1)
+                                RouletteCommand(e, 1);
+                            else
+                                RouletteCommand(e, totalSpins);
                         }
                         catch(Exception)
                         {
@@ -251,6 +255,8 @@ namespace TwitchBot
                     {
                         if (totalSpins * TIMEOUTROULETTELENGTH > MAXTIMEOUTTIMEALLOWED)
                             RouletteTimeout(e, MAXTIMEOUTTIMEALLOWED);
+                        else if (totalSpins * TIMEOUTROULETTELENGTH < 1)
+                            RouletteTimeout(e, TIMEOUTROULETTELENGTH);
                         else
                             RouletteTimeout(e, totalSpins * TIMEOUTROULETTELENGTH);
                         return;
