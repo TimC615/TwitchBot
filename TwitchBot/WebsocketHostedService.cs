@@ -4,12 +4,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using TwitchLib.EventSub.Websockets.Core.EventArgs.Channel;
+//using TwitchLib.EventSub.Websockets.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Websockets.Core.EventArgs;
 using TwitchLib.EventSub.Websockets;
 using TwitchLib.EventSub.Core;
 using Microsoft.Extensions.Hosting;
-using TwitchLib.EventSub.Websockets.Handler.Channel.ChannelPoints.Redemptions;
+//using TwitchLib.EventSub.Websockets.Handler.Channel.ChannelPoints.Redemptions;
 using System.Windows.Threading;
 using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api;
@@ -20,6 +20,8 @@ using TwitchLib.Api.Helix.Models.EventSub;
 using TwitchLib.Api.Helix.Models.Subscriptions;
 using System.Collections;
 using TwitchBot.Utility_Code;
+using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
+using TwitchLib.EventSub.Core.EventArgs.Channel;
 
 namespace TwitchBot
 {
@@ -63,12 +65,14 @@ namespace TwitchBot
             _eventSubWebsocketClient.WebsocketDisconnected += OnWebsocketDisconnected;
             _eventSubWebsocketClient.WebsocketReconnected += OnWebsocketReconnected;
             _eventSubWebsocketClient.ErrorOccurred += OnErrorOccurred;
+            //_eventSubWebsocketClient.ChannelChatMessage += OnMessageReceived;
 
             _eventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += OnChannelPointsCustomRewardRedemptionAdd;
             _eventSubWebsocketClient.ChannelAdBreakBegin += OnChannelAdBreakBegin;
 
 
             _eventSubWebsocketClient.ChannelFollow += OnChannelFollow;
+
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
@@ -227,9 +231,9 @@ namespace TwitchBot
             if (!GlobalObjects.botIsActive)
                 return;
 
-            var pointsRedemption = e.Notification.Payload.Event;
+            var pointsRedemption = e.Payload.Event;
             TwitchPointsRedeems.OnChannelPointsRewardRedeemed(e);
-            _logger.LogInformation($"EventSub: Points Redemption of {pointsRedemption.Reward.Title} by {pointsRedemption.UserName} at {pointsRedemption.RedeemedAt}");
+            _logger.LogInformation($"EventSub: Points Redemption of {pointsRedemption.Reward.Title} by {pointsRedemption.UserName} from channel {pointsRedemption.BroadcasterUserName} at {pointsRedemption.RedeemedAt}");
         }
 
         private async Task OnChannelFollow(object? sender, ChannelFollowArgs e)
@@ -237,7 +241,7 @@ namespace TwitchBot
             if (!GlobalObjects.botIsActive)
                 return;
 
-            var eventData = e.Notification.Payload.Event;
+            var eventData = e.Payload.Event;
             _logger.LogInformation($"EventSub: {eventData.UserName} followed {eventData.BroadcasterUserName} at {eventData.FollowedAt}");
         }
 
@@ -250,7 +254,15 @@ namespace TwitchBot
                     TwitchUtility.OnCommercial_NewThread(e);
                 }).Start();
 
-                _logger.LogInformation($"EventSub: Ad break started at {e.Notification.Payload.Event.StartedAt} for {e.Notification.Payload.Event.DurationSeconds} seconds");
+                _logger.LogInformation($"EventSub: Ad break started at {e.Payload.Event.StartedAt} for {e.Payload.Event.DurationSeconds} seconds");
+        }
+
+        private async Task OnMessageReceived(object? sender, ChannelChatMessageArgs e)
+        {
+            if (!GlobalObjects.botIsActive)
+            {
+                ChannelChatMessage test = e.Payload.Event;
+            }
         }
     }
 }

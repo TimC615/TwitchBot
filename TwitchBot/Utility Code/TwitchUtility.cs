@@ -9,8 +9,9 @@ using System.Threading.Tasks;
 using TwitchLib.Api;
 using TwitchLib.Api.Auth;
 using TwitchLib.Api.Helix.Models.Moderation.GetModerators;
+using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
-using TwitchLib.EventSub.Websockets.Core.EventArgs.Channel;
+using TwitchLib.EventSub.Websockets.Core.EventArgs;
 using TwitchLib.PubSub.Events;
 
 namespace TwitchBot.Utility_Code
@@ -127,7 +128,7 @@ namespace TwitchBot.Utility_Code
 
         async static public void OnCommercial_NewThread(ChannelAdBreakBeginArgs e)
         {
-            int commercialBreakLength = e.Notification.Payload.Event.DurationSeconds;
+            int commercialBreakLength = e.Payload.Event.DurationSeconds;
             int threadSleepLength = commercialBreakLength * 1000;
 
             WPFUtility.WriteToLog("EventSub OnCommercial: Ads started for " + commercialBreakLength + " seconds");
@@ -137,12 +138,12 @@ namespace TwitchBot.Utility_Code
             if (commercialBreakLength >= 60)
             {
                 double commercialBreakLengthMin = (double)commercialBreakLength / 60;
-                GlobalObjects._TwitchClient.SendMessage(e.Notification.Payload.Event.BroadcasterUserLogin, "Ads have started and will last for " + commercialBreakLengthMin
+                GlobalObjects._TwitchClient.SendMessage(e.Payload.Event.BroadcasterUserLogin, "Ads have started and will last for " + commercialBreakLengthMin
                     + " minutes. Feel free to stretch a bit, hydrate, or just chill out in chat!");
             }
             else
             {
-                GlobalObjects._TwitchClient.SendMessage(e.Notification.Payload.Event.BroadcasterUserLogin, "Ads have started and will last for " + commercialBreakLength
+                GlobalObjects._TwitchClient.SendMessage(e.Payload.Event.BroadcasterUserLogin, "Ads have started and will last for " + commercialBreakLength
                     + " seconds. Feel free to stretch a bit, hydrate, or just chill out in chat!");
             }
 

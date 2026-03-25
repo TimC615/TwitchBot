@@ -8,15 +8,16 @@ using System.Threading.Tasks;
 using TwitchBot.Utility_Code;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomReward;
 using TwitchLib.Api.Helix.Models.Channels.GetChannelInformation;
+using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
-using TwitchLib.EventSub.Websockets.Core.EventArgs.Channel;
+using TwitchLib.EventSub.Websockets.Core.EventArgs;
 using TwitchLib.PubSub.Events;
 
 namespace TwitchBot
 {
     internal class TwitchPointsRedeems
     {
-        
+
         //
         //----------------------PubSub Event Hookups----------------------
         //
@@ -57,11 +58,14 @@ namespace TwitchBot
         }
         */
 
-        
+        //
+        //----------------------End of PubSub Event Hookups----------------------
+        //
+
         public static void OnChannelPointsRewardRedeemed(ChannelPointsCustomRewardRedemptionArgs e)
         {
             //Log("PubSub: " + e.RewardRedeemed.Redemption.Reward.Title);
-            var pointsRedemption = e.Notification.Payload.Event;
+            var pointsRedemption = e.Payload.Event;
             string redeemTitle = pointsRedemption.Reward.Title.ToLower();
             WPFUtility.WriteToLog("Points Reward: " + redeemTitle);
 
@@ -137,19 +141,5 @@ namespace TwitchBot
                     break;
             }
         }
-        
-        //Handled in TwitchAdBreaks.cs
-        //private void PubSub_OnCommercial(object sender, OnCommercialArgs e)
-        //{
-        //    //do actual OnCommercial handling on new thread (method will sleep the thread)
-        //    new Thread(delegate () {
-        //        OnCommercial_NewThread(sender, e);
-        //    }).Start();
-        //}
-        
-
-        //
-        //----------------------End of PubSub Event Hookups----------------------
-        //
     }
 }

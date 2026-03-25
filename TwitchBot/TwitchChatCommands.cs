@@ -12,6 +12,7 @@ using TwitchLib.Client;
 using System.Net.Http;
 using System.IO;
 using TwitchLib.Api;
+using TwitchLib.Api.Helix.Models.Channels.SendChatMessage;
 
 namespace TwitchBot
 {
@@ -55,8 +56,18 @@ namespace TwitchBot
             this.NinjaAPIConnection = NinjaAPIConnection;
         }
 
-        public void BaseCommandMethod(TwitchLib.Client.Models.ChatCommand e)
+        async public void BaseCommandMethod(TwitchLib.Client.Models.ChatCommand e)
         {
+            /*
+            SendChatMessageRequest test = new SendChatMessageRequest();
+            test.Message = "This is a test message";
+            test.BroadcasterId = TwitchChannelId;   //set this to my ID so it sends the message to my chat
+            test.SenderId = TwitchChannelId;    //set this to the ID of CakeBot___ to respond through that account
+            test.ForSourceOnly = true;  //IMPORTANT. use this with ONLY an app access token (not user access) to make it so messages are sent to just my channel in a shared chat and to add the bot badge to the senderId account
+
+            await GlobalObjects._TwitchAPI.Helix.Chat.SendChatMessage(test, await GlobalObjects._TwitchAPI.Auth.GetAccessTokenAsync());
+            */
+
             string commandText = e.CommandText.ToLower();
 
             //helps avoid firing unnecessarily when streaming with others using linked chats (must be in bot's stream to trigger chat commands)

@@ -99,10 +99,11 @@ namespace TwitchBot
         private readonly string ClientId = Properties.Settings.Default.clientid;
         private readonly string ClientSecret = Properties.Settings.Default.clientsecret;
         private readonly List<string> Scopes = new List<string>
-        { "user:edit", "chat:read", "chat:edit", "channel:moderate", "bits:read",
-            "channel:read:subscriptions", "user:read:email", "user:read:subscriptions", "channel:manage:redemptions",
-            "channel:edit:commercial", "channel:manage:ads", "moderator:manage:banned_users",
-            "moderation:read", "channel:read:ads", "channel:manage:moderators"
+        {
+            "chat:read", "chat:edit",
+            "channel:bot", "user:bot",
+            "channel:moderate", "channel:read:subscriptions",  "channel:manage:redemptions", "channel:read:ads", "channel:manage:moderators",
+            "moderation:read"
         };      //find more Twitch API scopes at https://dev.twitch.tv/docs/authentication/scopes/
 
 
@@ -618,7 +619,15 @@ namespace TwitchBot
             var oauthedUser = await api.Helix.Users.GetUsersAsync();
             TwitchChannelId = oauthedUser.Users[0].Id;
 
-            GlobalObjects.TwitchBroadcasterUserId = oauthedUser.Users[0].Id;
+
+            //GlobalObjects.TwitchBroadcasterUserId = oauthedUser.Users[0].Id;
+
+
+            GetUsersResponse broadcasterUserResponse = await api.Helix.Users.GetUsersAsync(logins:new List<string> {"thecakeisapie__"});
+            GlobalObjects.TwitchBroadcasterUserId = broadcasterUserResponse.Users[0].Id;
+
+
+
 
             TwitchChannelName = oauthedUser.Users[0].Login;
             GlobalObjects.TwitchChannelName = oauthedUser.Users[0].Login;
@@ -662,7 +671,8 @@ namespace TwitchBot
             GlobalObjects._TwitchClient = new TwitchClient();
             _TwitchClient = GlobalObjects._TwitchClient;
 
-            _TwitchClient.Initialize(new ConnectionCredentials(username, accessToken), TwitchChannelName);
+            //_TwitchClient.Initialize(new ConnectionCredentials(username, accessToken), TwitchChannelName);
+            _TwitchClient.Initialize(new ConnectionCredentials(username, accessToken), "thecakeisapie__");
 
             //Events you want to subscribe to
             _TwitchClient.OnConnected += Client_OnConnected;
@@ -768,11 +778,6 @@ namespace TwitchBot
 
                 //Twitch plays Skyrim SE
                 TwitchPlaysObj.TwitchPlaysSkyrim(e);
-
-                //------------------<IMPLEMENT>------------------------------
-                //Twitch plays Trackmania
-
-                //------------------</IMPLEMENT>-----------------------------
 
 
                 //simple testing to hear how things sound through the speechsynth
