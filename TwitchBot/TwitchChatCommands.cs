@@ -35,7 +35,7 @@ namespace TwitchBot
 
         Dictionary<string, string> CommandsStaticResponses = new Dictionary<string, string>
         {
-            { "about", "Hello! I'm TheCakeIsAPie__ and I'm a Canadian variety streamer. We play a bunch of stuff over here in this small corner of the internet. Come pop a seat and have fun watching the shenanigans!"},
+            { "about", "Hello! I'm Cake and I'm a Canadian variety streamer. We play a bunch of stuff over here in this small corner of the internet. Come pop a seat and have fun watching the shenanigans!"},
             { "discord", "Join the discord server at: https://discord.gg/uzHqnxKKkC"},
             { "twitter", "Follow me on Twitter at: https://twitter.com/TheCakeIsAPi"},
             { "lurk", "Have fun lurking!"}
@@ -60,15 +60,15 @@ namespace TwitchBot
             string commandText = e.CommandText.ToLower();
 
             //helps avoid firing unnecessarily when streaming with others using linked chats (must be in bot's stream to trigger chat commands)
-            if (e.ChatMessage.Channel != GlobalObjects.TwitchChannelName)
-                return;
+            //if (e.ChatMessage.Channel != GlobalObjects.TwitchChannelName)
+            //    return;
 
             //2 ways to deal with commands: if/switch statements OR dictionary lookups
 
             //responses are added to dictionary in lowercase
             if (CommandsStaticResponses.TryGetValue(commandText, out string? value))
             {
-                _TwitchClient.SendReply(TwitchChannelName,
+                _TwitchClient.SendReply(e.ChatMessage.Channel,
                     e.ChatMessage.Id,
                     value);
             }
@@ -79,7 +79,7 @@ namespace TwitchBot
                 //return list of current bot commands (added different command to avoid also showing commands for other Twitch bots)
                 if(commandText.Equals("commands") || commandText.Equals("botmenu"))
                 {
-                    _TwitchClient.SendReply(TwitchChannelName,
+                    _TwitchClient.SendReply(e.ChatMessage.Channel,
                             e.ChatMessage.Id,
                             "The current chat commands are: help, about, discord, twitter, lurk, joke, fact, roll, roulette, rouletteleaderboard, and 1st");
                 }
@@ -98,7 +98,7 @@ namespace TwitchBot
                         RollCommand(e);
                     }
                     else
-                        _TwitchClient.SendReply(TwitchChannelName,
+                        _TwitchClient.SendReply(e.ChatMessage.Channel,
                             e.ChatMessage.Id,
                             "Make sure you add in the number of dice to roll and the number of sides on a die (e.g. \"!roll 2d6\")");
                 }
@@ -172,7 +172,7 @@ namespace TwitchBot
                 {
                     string skyrimCommands = "You can mess with skyrim by saying any of the following: forward, back, stop, left, right, jump, " +
                         "cheese, soup, wine, potions, rabbits, skeevers, bears, lydia, spiders, dragons, cheesemageddon, and soupmageddon";
-                    _TwitchClient.SendReply(TwitchChannelName,
+                    _TwitchClient.SendReply(e.ChatMessage.Channel,
                         e.ChatMessage.Id,
                         skyrimCommands);
                 }
@@ -184,7 +184,7 @@ namespace TwitchBot
                 List<string> test = e.ArgumentsAsList;
 
                 if (e.ArgumentsAsList.Count == 0)
-                    _TwitchClient.SendReply(TwitchChannelName,
+                    _TwitchClient.SendReply(e.ChatMessage.Channel,
                         e.ChatMessage.Id,
                         "Type \"!help <command>\" to see how you can use it (E.g. !help roll)");
                 else
@@ -203,22 +203,22 @@ namespace TwitchBot
                             case "joke":
                             case "1st":
                             case "first":
-                                _TwitchClient.SendReply(TwitchChannelName,
+                                _TwitchClient.SendReply(e.ChatMessage.Channel,
                                     e.ChatMessage.Id,
                                     "Enter \"!" + helpSpecifier + "\" and I'll do all the rest");
                                 break;
                             case "roll":
-                                _TwitchClient.SendReply(TwitchChannelName,
+                                _TwitchClient.SendReply(e.ChatMessage.Channel,
                                     e.ChatMessage.Id,
                                     "Enter \"!roll d<number of sides>\" to roll a single die or \"!roll <number of dice>d<number of sides>\" to roll multiple dice! (e.g. !roll d6) or !roll 3d20");
                                 break;
                             case "roulette":
-                                _TwitchClient.SendReply(TwitchChannelName,
+                                _TwitchClient.SendReply(e.ChatMessage.Channel,
                                     e.ChatMessage.Id,
                                     "Enter \"!roulette\" for a chance to time yourself out for " + TIMEOUTROULETTELENGTH + " seconds or add a number afterwards to roll multiple times in a row!");
                                 break;
                             case "rouletteleaderboard":
-                                _TwitchClient.SendReply(TwitchChannelName,
+                                _TwitchClient.SendReply(e.ChatMessage.Channel,
                                     e.ChatMessage.Id,
                                     "Enter \"!rouletteleaderboard\" to see who has the highest active streaks on the timeout roulette wheel!");
                                 break;
@@ -243,7 +243,7 @@ namespace TwitchBot
 
                 if (e.ChatMessage.IsMe || e.ChatMessage.IsBroadcaster || e.ChatMessage.IsStaff)
                 {
-                    _TwitchClient.SendReply(TwitchChannelName,
+                    _TwitchClient.SendReply(e.ChatMessage.Channel,
                         e.ChatMessage.Id,
                         $"Sorry {e.ChatMessage.Username}, you're not able to be timed out so you can't spin the roulette");
                     throw new Exception("User tried to timeout as restricted role");
@@ -278,7 +278,7 @@ namespace TwitchBot
                 //helps to avoid spamming the chat if roulette command is too popular
                 if (Properties.Settings.Default.DisplayRouletteSuccessMessage)
                 {
-                    _TwitchClient.SendReply(TwitchChannelName,
+                    _TwitchClient.SendReply(e.ChatMessage.Channel,
                     e.ChatMessage.Id,
                     $"{e.ChatMessage.DisplayName} has survived the timeout roulette {rouletteLeaderboardCount} time(s)");
                 }
@@ -310,7 +310,7 @@ namespace TwitchBot
             else
                 timeoutRouletteMessage = $"{e.ChatMessage.DisplayName} won the roulette and timed themselves out for {timeoutLength} seconds on their first spin!";
 
-            _TwitchClient.SendReply(TwitchChannelName,
+            _TwitchClient.SendReply(e.ChatMessage.Channel,
                 e.ChatMessage.Id,
                 timeoutRouletteMessage);
 
@@ -349,7 +349,7 @@ namespace TwitchBot
 
             if (topLeaderboardSpots.Count == 0)
             {
-                _TwitchClient.SendReply(TwitchChannelName,
+                _TwitchClient.SendReply(e.ChatMessage.Channel,
                 e.ChatMessage.Id,
                 "There are currently no people listed on the timeout roulette leaderboard. Make sure to have at least 1 spin without being timed out to show up here!");
             }
@@ -366,7 +366,7 @@ namespace TwitchBot
 
                 leaderboardOutput = leaderboardOutput.Remove(leaderboardOutput.LastIndexOf(","), 1);
 
-                _TwitchClient.SendReply(TwitchChannelName,
+                _TwitchClient.SendReply(e.ChatMessage.Channel,
                     e.ChatMessage.Id,
                     leaderboardOutput);
             }
@@ -431,7 +431,7 @@ namespace TwitchBot
                 catch (Exception ex)
                 {
                     WPFUtility.WriteToLog("Roll command error converting param 0: " + ex.Message);
-                    _TwitchClient.SendReply(TwitchChannelName,
+                    _TwitchClient.SendReply(e.ChatMessage.Channel,
                         e.ChatMessage.Id,
                         "The number of dice to roll needs to be a whole number greater than or equal to 1");
                     diceToRoll = -1;
@@ -444,7 +444,7 @@ namespace TwitchBot
                     {
                         long sizeOfDie = Int64.Parse(rollParams[1]);
                         if (sizeOfDie <= 1)
-                            _TwitchClient.SendReply(TwitchChannelName,
+                            _TwitchClient.SendReply(e.ChatMessage.Channel,
                                 e.ChatMessage.Id,
                                 "The size of the die to roll needs to be a whole number greater than 1");
                         //roll dice
@@ -459,9 +459,9 @@ namespace TwitchBot
                             }
 
                             if (total == 1)
-                                _TwitchClient.SendReply(TwitchChannelName, e.ChatMessage.Id, "You rolled: a nat 1! Good job!");
+                                _TwitchClient.SendReply(e.ChatMessage.Channel, e.ChatMessage.Id, "You rolled: a nat 1! Good job!");
                             else
-                                _TwitchClient.SendReply(TwitchChannelName, e.ChatMessage.Id, "You rolled: " + total);
+                                _TwitchClient.SendReply(e.ChatMessage.Channel, e.ChatMessage.Id, "You rolled: " + total);
                         }
                     }
                     catch (Exception ex)
@@ -498,13 +498,14 @@ namespace TwitchBot
             if (firstRedeemLeaderboard != null)
             {
                 string username = e.ChatMessage.DisplayName;
+                string userID = e.ChatMessage.UserId;
 
-                if (firstRedeemLeaderboard.ContainsKey(username))
-                    _TwitchClient.SendReply(TwitchChannelName,
+                if (firstRedeemLeaderboard.ContainsKey(userID))
+                    _TwitchClient.SendReply(e.ChatMessage.Channel,
                         e.ChatMessage.Id,
-                        $"{username} has been first {firstRedeemLeaderboard[username]} time(s)!");
+                        $"{username} has been first {firstRedeemLeaderboard[userID]} time(s)!");
                 else
-                    _TwitchClient.SendReply(TwitchChannelName,
+                    _TwitchClient.SendReply(e.ChatMessage.Channel,
                         e.ChatMessage.Id,
                         $"{username} hasn't been first before.");
             }

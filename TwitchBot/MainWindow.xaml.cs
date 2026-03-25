@@ -71,6 +71,10 @@ using System.ComponentModel;
 //look into making bot messages (especially the ads have started messages) viewable only on host channel
 //  don't want to spam shared chat feed with random bot stuff
 
+//button to turn off ad break message when in shared chat
+
+//maybe bar at bottom of screen to track ad break rpogress??
+
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
 {
@@ -618,6 +622,8 @@ namespace TwitchBot
 
             TwitchChannelName = oauthedUser.Users[0].Login;
             GlobalObjects.TwitchChannelName = oauthedUser.Users[0].Login;
+
+            WPFUtility.WriteToLog($"SetNameandId\tId: {TwitchChannelId}\tName:{TwitchChannelName}");
         }
 
         async Task<Tuple<String, String>> GetAccessAndRefreshTokens(string code)
@@ -665,11 +671,11 @@ namespace TwitchBot
             _TwitchClient.OnChatCommandReceived += Bot_OnChatCommandReceived;
             _TwitchClient.OnMessageReceived += Client_OnMessageReceived;
             _TwitchClient.OnRateLimit += TwitchClient_OnRateLimit;
+            _TwitchClient.OnJoinedChannel += Client_OnJoinedChannel;
 
             //Other subscription examples
             //_TwitchClient.OnBanned += Client_OnBanned;
             //_TwitchClient.OnUserTimedout += Client_OnUserTimedout;
-            //_TwitchClient.OnJoinedChannel += Client_OnJoinedChannel;
             //_TwitchClient.OnUserJoined += BotConnection_OnUserJoined;
             //_TwitchClient.OnUserLeft += BotConnection_OnUserLeft;
             //_TwitchClient.OnWhisperReceived += Client_OnWhisperReceived;
@@ -719,6 +725,12 @@ namespace TwitchBot
         private void Client_OnConnected(object sender, OnConnectedArgs e)
         {
             Log($"User {e.BotUsername} connected (bot access)");
+            GlobalObjects._TwitchClient.JoinChannel("thecakeisapie__");
+        }
+
+        private void Client_OnJoinedChannel (object sender, OnJoinedChannelArgs e)
+        {
+            Log($"User {e.BotUsername} joined channel {e.Channel}");
         }
 
         private void TwitchClient_OnDisconnected(object sender, TwitchLib.Communication.Events.OnDisconnectedEventArgs e)
@@ -971,6 +983,10 @@ namespace TwitchBot
         {
             if (_TwitchClient != null)
             {
+                //unsure if this is necessary as twitch may have an automatic handler for it _TwitchClient doesn't respond to Twitch after enough time
+                //current implementation seems to freeze bot when closing out window
+                //_TwitchClient.LeaveChannel(GlobalObjects.TwitchChannelName);
+
                 _TwitchClient.Disconnect();
             }
 

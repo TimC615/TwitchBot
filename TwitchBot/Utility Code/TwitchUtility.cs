@@ -130,24 +130,24 @@ namespace TwitchBot.Utility_Code
             int commercialBreakLength = e.Notification.Payload.Event.DurationSeconds;
             int threadSleepLength = commercialBreakLength * 1000;
 
-            WPFUtility.WriteToLog("EventSub: Ads started for " + commercialBreakLength + " seconds");
+            WPFUtility.WriteToLog("EventSub OnCommercial: Ads started for " + commercialBreakLength + " seconds");
 
             await MainWindow.AppWindow.CheckAccessToken();
 
             if (commercialBreakLength >= 60)
             {
                 double commercialBreakLengthMin = (double)commercialBreakLength / 60;
-                GlobalObjects._TwitchClient.SendMessage(GlobalObjects.TwitchChannelName, "Ads have started and will last for " + commercialBreakLengthMin
+                GlobalObjects._TwitchClient.SendMessage(e.Notification.Payload.Event.BroadcasterUserLogin, "Ads have started and will last for " + commercialBreakLengthMin
                     + " minutes. Feel free to stretch a bit, hydrate, or just chill out in chat!");
             }
             else
             {
-                GlobalObjects._TwitchClient.SendMessage(GlobalObjects.TwitchChannelName, "Ads have started and will last for " + commercialBreakLength
+                GlobalObjects._TwitchClient.SendMessage(e.Notification.Payload.Event.BroadcasterUserLogin, "Ads have started and will last for " + commercialBreakLength
                     + " seconds. Feel free to stretch a bit, hydrate, or just chill out in chat!");
             }
 
             Thread.Sleep(threadSleepLength);
-            WPFUtility.WriteToLog("PubSub_OnCommercial: Ads have finished");
+            WPFUtility.WriteToLog("EventSub OnCommercial: Ads have finished");
             //GlobalObjects._TwitchClient.SendMessage(GlobalObjects.TwitchChannelName, "Ad break is now done!");
         }
 
@@ -169,12 +169,11 @@ namespace TwitchBot.Utility_Code
                 WPFUtility.WriteToLog($"Read from first redeem leaderboard JSON error: {except.Message}");
                 return;
             }
-
             //update leaderboard 
-            if (firstRedeemLeaderboard.ContainsKey(e.UserName))
-                firstRedeemLeaderboard[e.UserName]++;
+            if (firstRedeemLeaderboard.ContainsKey(e.UserId))
+                firstRedeemLeaderboard[e.UserId]++;
             else
-                firstRedeemLeaderboard.Add(e.UserName, 1);
+                firstRedeemLeaderboard.Add(e.UserId, 1);
 
 
             //check in case no update occurs
