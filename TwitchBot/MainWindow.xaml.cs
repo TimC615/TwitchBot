@@ -115,7 +115,6 @@ namespace TwitchBot
         private HttpServer WebServer;
         private HttpServer WebServerBotAccount;
         private readonly string RedirectUri = "http://localhost:3000";
-        private readonly string RedirectUriBotAccount = "http://localhost:8000";
         private readonly string ClientId = Properties.Settings.Default.clientid;
         private readonly string ClientSecret = Properties.Settings.Default.clientsecret;
 
@@ -126,12 +125,6 @@ namespace TwitchBot
             "channel:moderate", "channel:read:subscriptions",  "channel:manage:redemptions", "channel:read:ads", "channel:manage:moderators",
             "moderation:read"
         };      //find more Twitch API scopes at https://dev.twitch.tv/docs/authentication/scopes/
-
-        private readonly List<string> BotAccountScopes = new List<string>
-        {
-            "user:read:chat", "user:write:chat", "user:bot"
-        };
-
 
         //WPF
         Settings settings;
