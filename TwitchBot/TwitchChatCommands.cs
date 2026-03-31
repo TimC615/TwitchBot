@@ -21,9 +21,6 @@ namespace TwitchBot
         TwitchClient _TwitchClient;
         TwitchAPI _TwitchAPI;
 
-        string TwitchChannelName;
-        string TwitchChannelId;
-
         SpeechSynthesis _SpeechSynth;
         HttpClient NinjaAPIConnection;
 
@@ -43,14 +40,10 @@ namespace TwitchBot
         };
 
         public TwitchChatCommands(TwitchClient _TwitchClient, TwitchAPI _twitchAPI, 
-            string twitchChannelName, string twitchChannelId, 
             SpeechSynthesis _SpeechSynth, HttpClient NinjaAPIConnection)
         {
             this._TwitchClient = _TwitchClient;
             this._TwitchAPI = _twitchAPI;
-
-            this.TwitchChannelName = twitchChannelName;
-            this.TwitchChannelId = twitchChannelId;
 
             this._SpeechSynth = _SpeechSynth;
             this.NinjaAPIConnection = NinjaAPIConnection;
@@ -79,9 +72,7 @@ namespace TwitchBot
             //responses are added to dictionary in lowercase
             if (CommandsStaticResponses.TryGetValue(commandText, out string? value))
             {
-                _TwitchClient.SendReply(e.ChatMessage.Channel,
-                    e.ChatMessage.Id,
-                    value);
+                TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, value, e.ChatMessage.Id, true);
             }
 
             //more complex comands
@@ -90,9 +81,8 @@ namespace TwitchBot
                 //return list of current bot commands (added different command to avoid also showing commands for other Twitch bots)
                 if(commandText.Equals("commands") || commandText.Equals("botmenu"))
                 {
-                    _TwitchClient.SendReply(e.ChatMessage.Channel,
-                            e.ChatMessage.Id,
-                            "The current chat commands are: help, about, discord, twitter, lurk, joke, fact, roll, roulette, rouletteleaderboard, and 1st");
+                    string helpMessage = "The current chat commands are: help, about, discord, twitter, lurk, joke, fact, roll, roulette, rouletteleaderboard, and 1st";
+                    TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, helpMessage, e.ChatMessage.Id, true);
                 }
 
 
@@ -109,9 +99,10 @@ namespace TwitchBot
                         RollCommand(e);
                     }
                     else
-                        _TwitchClient.SendReply(e.ChatMessage.Channel,
-                            e.ChatMessage.Id,
-                            "Make sure you add in the number of dice to roll and the number of sides on a die (e.g. \"!roll 2d6\")");
+                    {
+                        string inputErrorMessage = "Make sure you add in the number of dice to roll and the number of sides on a die (e.g. \"!roll 2d6\")";
+                        TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, inputErrorMessage, e.ChatMessage.Id, true);
+                    }
                 }
 
                 //Grab random fact from https://api-ninjas.com/
@@ -183,65 +174,65 @@ namespace TwitchBot
                 {
                     string skyrimCommands = "You can mess with skyrim by saying any of the following: forward, back, stop, left, right, jump, " +
                         "cheese, soup, wine, potions, rabbits, skeevers, bears, lydia, spiders, dragons, cheesemageddon, and soupmageddon";
-                    _TwitchClient.SendReply(e.ChatMessage.Channel,
-                        e.ChatMessage.Id,
-                        skyrimCommands);
+
+                    TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, skyrimCommands, e.ChatMessage.Id, true);
                 }
             }
         }
 
         void HelpCommands(TwitchLib.Client.Models.ChatCommand e)
         {
-                List<string> test = e.ArgumentsAsList;
+            List<string> test = e.ArgumentsAsList;
 
-                if (e.ArgumentsAsList.Count == 0)
-                    _TwitchClient.SendReply(e.ChatMessage.Channel,
-                        e.ChatMessage.Id,
-                        "Type \"!help <command>\" to see how you can use it (E.g. !help roll)");
-                else
+            //checks if user is asking for help on a specific command or the help command itself
+            if (e.ArgumentsAsList.Count == 0)
+            {
+                string defaultHelpMessage = "Type \"!help <command>\" to see how you can use it (E.g. !help roll)";
+                TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, defaultHelpMessage, e.ChatMessage.Id, true);
+            }
+            else
+            {
+                try
                 {
-                    try
-                    {
-                        string helpSpecifier = e.ArgumentsAsList[0].ToLower();
+                    string helpSpecifier = e.ArgumentsAsList[0].ToLower();
 
-                        switch (helpSpecifier)
-                        {
-                            case "about":
-                            case "discord":
-                            case "twitter":
-                            case "lurk":
-                            case "fact":
-                            case "joke":
-                            case "1st":
-                            case "first":
-                                _TwitchClient.SendReply(e.ChatMessage.Channel,
-                                    e.ChatMessage.Id,
-                                    "Enter \"!" + helpSpecifier + "\" and I'll do all the rest");
-                                break;
-                            case "roll":
-                                _TwitchClient.SendReply(e.ChatMessage.Channel,
-                                    e.ChatMessage.Id,
-                                    "Enter \"!roll d<number of sides>\" to roll a single die or \"!roll <number of dice>d<number of sides>\" to roll multiple dice! (e.g. !roll d6) or !roll 3d20");
-                                break;
-                            case "roulette":
-                                _TwitchClient.SendReply(e.ChatMessage.Channel,
-                                    e.ChatMessage.Id,
-                                    "Enter \"!roulette\" for a chance to time yourself out for " + TIMEOUTROULETTELENGTH + " seconds or add a number afterwards to roll multiple times in a row!");
-                                break;
-                            case "rouletteleaderboard":
-                                _TwitchClient.SendReply(e.ChatMessage.Channel,
-                                    e.ChatMessage.Id,
-                                    "Enter \"!rouletteleaderboard\" to see who has the highest active streaks on the timeout roulette wheel!");
-                                break;
-                            default:
-                                break;
-                        }
-                    }
-                    catch (Exception except)
+                    string? helpMessage = null;
+                    switch (helpSpecifier)
                     {
-                        WPFUtility.WriteToLog("Help command: " + except.Message);
+                        case "about":
+                        case "discord":
+                        case "twitter":
+                        case "lurk":
+                        case "fact":
+                        case "joke":
+                        case "1st":
+                        case "first":
+                            helpMessage = "Enter \"!" + helpSpecifier + "\" and I'll do all the rest";
+                            break;
+                        case "roll":
+                            helpMessage = "Enter \"!roll d<number of sides>\" to roll a single die or \"!roll <number of dice>d<number of sides>\" to roll multiple dice! (e.g. !roll d6) or !roll 3d20";
+                            break;
+                        case "roulette":
+                            helpMessage = "Enter \"!roulette\" for a chance to time yourself out for " + TIMEOUTROULETTELENGTH + " seconds or add a number afterwards to roll multiple times in a row!";
+                            break;
+                        case "rouletteleaderboard":
+                            helpMessage = "Enter \"!rouletteleaderboard\" to see who has the highest active streaks on the timeout roulette wheel!";
+                            break;
+                        default:
+                            break;
+                    }
+
+                    //returns a message only if user is asking for help with an actual command
+                    if (!String.IsNullOrEmpty(helpMessage))
+                    {
+                        TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, helpMessage, e.ChatMessage.Id, true);
                     }
                 }
+                catch (Exception except)
+                {
+                    WPFUtility.WriteToLog("Help command: " + except.Message);
+                }
+            }
         }
 
         void RouletteCommand(TwitchLib.Client.Models.ChatCommand e, int totalSpins = 1)
@@ -254,9 +245,9 @@ namespace TwitchBot
 
                 if (e.ChatMessage.IsMe || e.ChatMessage.IsBroadcaster || e.ChatMessage.IsStaff)
                 {
-                    _TwitchClient.SendReply(e.ChatMessage.Channel,
-                        e.ChatMessage.Id,
-                        $"Sorry {e.ChatMessage.Username}, you're not able to be timed out so you can't spin the roulette");
+                    string rouletteInputError = $"Sorry {e.ChatMessage.Username}, you're not able to be timed out so you can't spin the roulette";
+                    TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, rouletteInputError, e.ChatMessage.Id, true);
+
                     throw new Exception("User tried to timeout as restricted role");
                 }
 
@@ -289,9 +280,8 @@ namespace TwitchBot
                 //helps to avoid spamming the chat if roulette command is too popular
                 if (Properties.Settings.Default.DisplayRouletteSuccessMessage)
                 {
-                    _TwitchClient.SendReply(e.ChatMessage.Channel,
-                    e.ChatMessage.Id,
-                    $"{e.ChatMessage.DisplayName} has survived the timeout roulette {rouletteLeaderboardCount} time(s)");
+                    string rouletteSurvivalMessage = $"{e.ChatMessage.DisplayName} has survived the timeout roulette {rouletteLeaderboardCount} time(s)";
+                    TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, rouletteSurvivalMessage, e.ChatMessage.Id, true);
                 }
 
                 SaveRouletteLeaderboardToJson();
@@ -321,9 +311,7 @@ namespace TwitchBot
             else
                 timeoutRouletteMessage = $"{e.ChatMessage.DisplayName} won the roulette and timed themselves out for {timeoutLength} seconds on their first spin!";
 
-            _TwitchClient.SendReply(e.ChatMessage.Channel,
-                e.ChatMessage.Id,
-                timeoutRouletteMessage);
+            TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, timeoutRouletteMessage, e.ChatMessage.Id, true);
 
             //ban info for current user
             BanUserRequest request = new BanUserRequest();
@@ -333,8 +321,8 @@ namespace TwitchBot
 
             //add specific channel and acting moderator info to current user ban info
             BanUserResponse result = _TwitchAPI.Helix.Moderation.BanUserAsync(
-                TwitchChannelId,
-                TwitchChannelId,
+                GlobalObjects.TwitchBroadcasterUserId,
+                GlobalObjects.TwitchBroadcasterUserId,
                 request
                 ).Result;
 
@@ -346,7 +334,7 @@ namespace TwitchBot
             {
                 new Thread(delegate ()
                 {
-                    TwitchUtility.ReinstateModRole(_TwitchAPI, TwitchChannelId, e.ChatMessage.UserId, e.ChatMessage.Username, TIMEOUTROULETTELENGTH);
+                    TwitchUtility.ReinstateModRole(_TwitchAPI, GlobalObjects.TwitchBroadcasterUserId, e.ChatMessage.UserId, e.ChatMessage.Username, TIMEOUTROULETTELENGTH);
                 }).Start();
             }
         }
@@ -360,9 +348,8 @@ namespace TwitchBot
 
             if (topLeaderboardSpots.Count == 0)
             {
-                _TwitchClient.SendReply(e.ChatMessage.Channel,
-                e.ChatMessage.Id,
-                "There are currently no people listed on the timeout roulette leaderboard. Make sure to have at least 1 spin without being timed out to show up here!");
+                string emptyLeaderboardMessage = "There are currently no people listed on the timeout roulette leaderboard. Make sure to have at least 1 spin without being timed out to show up here!";
+                TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, emptyLeaderboardMessage, e.ChatMessage.Id, true);
             }
             else
             {
@@ -377,9 +364,7 @@ namespace TwitchBot
 
                 leaderboardOutput = leaderboardOutput.Remove(leaderboardOutput.LastIndexOf(","), 1);
 
-                _TwitchClient.SendReply(e.ChatMessage.Channel,
-                    e.ChatMessage.Id,
-                    leaderboardOutput);
+                TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, leaderboardOutput, e.ChatMessage.Id, true);
             }
         }
 
@@ -442,9 +427,10 @@ namespace TwitchBot
                 catch (Exception ex)
                 {
                     WPFUtility.WriteToLog("Roll command error converting param 0: " + ex.Message);
-                    _TwitchClient.SendReply(e.ChatMessage.Channel,
-                        e.ChatMessage.Id,
-                        "The number of dice to roll needs to be a whole number greater than or equal to 1");
+
+                    string rollInputErrorMessage = "The number of dice to roll needs to be a whole number greater than or equal to 1";
+                    TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, rollInputErrorMessage, e.ChatMessage.Id, true);
+
                     diceToRoll = -1;
                 }
 
@@ -455,9 +441,10 @@ namespace TwitchBot
                     {
                         long sizeOfDie = Int64.Parse(rollParams[1]);
                         if (sizeOfDie <= 1)
-                            _TwitchClient.SendReply(e.ChatMessage.Channel,
-                                e.ChatMessage.Id,
-                                "The size of the die to roll needs to be a whole number greater than 1");
+                        {
+                            string rollInputErrorMessage = "The size of the die to roll needs to be a whole number greater than 1";
+                            TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, rollInputErrorMessage, e.ChatMessage.Id, true);
+                        }
                         //roll dice
                         else
                         {
@@ -469,10 +456,13 @@ namespace TwitchBot
                                 total += random.NextInt64(1, sizeOfDie + 1);
                             }
 
+                            string rollResultMessage = "";
                             if (total == 1)
-                                _TwitchClient.SendReply(e.ChatMessage.Channel, e.ChatMessage.Id, "You rolled: a nat 1! Good job!");
+                                rollResultMessage = "You rolled: a nat 1! Good job!";
                             else
-                                _TwitchClient.SendReply(e.ChatMessage.Channel, e.ChatMessage.Id, "You rolled: " + total);
+                                rollResultMessage = $"You rolled: {total}";
+
+                            TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, rollResultMessage, e.ChatMessage.Id, true);
                         }
                     }
                     catch (Exception ex)
@@ -511,14 +501,14 @@ namespace TwitchBot
                 string username = e.ChatMessage.DisplayName;
                 string userID = e.ChatMessage.UserId;
 
+                string firstResultMessage = "";
+
                 if (firstRedeemLeaderboard.ContainsKey(userID))
-                    _TwitchClient.SendReply(e.ChatMessage.Channel,
-                        e.ChatMessage.Id,
-                        $"{username} has been first {firstRedeemLeaderboard[userID]} time(s)!");
+                    firstResultMessage = $"{username} has been first {firstRedeemLeaderboard[userID]} time(s)!";
                 else
-                    _TwitchClient.SendReply(e.ChatMessage.Channel,
-                        e.ChatMessage.Id,
-                        $"{username} hasn't been first before.");
+                    firstResultMessage = $"{username} hasn't been first before.";
+
+                TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, firstResultMessage, e.ChatMessage.Id, true);
             }
         }
 
@@ -570,10 +560,12 @@ namespace TwitchBot
                     //API get request
                     string stringResponse = await response.Content.ReadAsStringAsync();
 
+                    WPFUtility.WriteToLog($"Fact test: {stringResponse}");
+
                     //convert API call to array of objects. we only ever call 1 result from API so length will always be 1
                     APINinjaFacts[] result = JsonConvert.DeserializeObject<APINinjaFacts[]>(stringResponse);
 
-                    _TwitchClient.SendMessage(TwitchChannelName, result[0].fact);
+                    TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, result[0].fact, sendMessageAsChatBot: true);
                     //TwitchPlays.SpeechSynthSync(result[0].fact);
                     _SpeechSynth.SpeechSynth(result[0].fact);
                 }
@@ -601,7 +593,7 @@ namespace TwitchBot
                     //convert API call to array of objects. we only ever call 1 result from API so length will always be 1
                     APINinjaDadJokes[] result = JsonConvert.DeserializeObject<APINinjaDadJokes[]>(stringResponse);
 
-                    _TwitchClient.SendMessage(TwitchChannelName, result[0].joke);
+                    TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, result[0].joke, sendMessageAsChatBot: true);
                     //TwitchPlays.SpeechSynthSync(result[0].joke);
                     _SpeechSynth.SpeechSynth(result[0].joke);
                 }

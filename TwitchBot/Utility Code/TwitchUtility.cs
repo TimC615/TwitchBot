@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using TwitchLib.Api;
 using TwitchLib.Api.Auth;
+using TwitchLib.Api.Helix.Models.Channels.SendChatMessage;
 using TwitchLib.Api.Helix.Models.Moderation.GetModerators;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
@@ -135,17 +136,16 @@ namespace TwitchBot.Utility_Code
 
             await MainWindow.AppWindow.CheckAccessToken();
 
+            string commercialBreakMessage = "";
             if (commercialBreakLength >= 60)
             {
                 double commercialBreakLengthMin = (double)commercialBreakLength / 60;
-                GlobalObjects._TwitchClient.SendMessage(e.Payload.Event.BroadcasterUserLogin, "Ads have started and will last for " + commercialBreakLengthMin
-                    + " minutes. Feel free to stretch a bit, hydrate, or just chill out in chat!");
+                commercialBreakMessage = $"Ads have started and will last for {commercialBreakLengthMin} minutes. Feel free to stretch a bit, hydrate, or just chill out in chat!";
             }
             else
-            {
-                GlobalObjects._TwitchClient.SendMessage(e.Payload.Event.BroadcasterUserLogin, "Ads have started and will last for " + commercialBreakLength
-                    + " seconds. Feel free to stretch a bit, hydrate, or just chill out in chat!");
-            }
+                commercialBreakMessage = $"Ads have started and will last for {commercialBreakLength} seconds. Feel free to stretch a bit, hydrate, or just chill out in chat!";
+
+            TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, commercialBreakMessage, sendMessageAsChatBot: true);
 
             Thread.Sleep(threadSleepLength);
             WPFUtility.WriteToLog("EventSub OnCommercial: Ads have finished");
@@ -218,6 +218,42 @@ namespace TwitchBot.Utility_Code
             catch (Exception except)
             {
                 WPFUtility.WriteToLog($"ReinstateModRole Error: {except.Message}");
+            }
+        }
+
+        //old way bot handled sending messages was through _TwitchClient and Twitch's IRC channel system
+        //e.g.
+        /*
+            _TwitchClient.SendReply(e.ChatMessage.Channel,
+                e.ChatMessage.Id,
+                "The current chat commands are: help, about, discord, twitter, lurk, joke, fact, roll, roulette, rouletteleaderboard, and 1st");
+        */
+        //where e is the object containing the current message
+        static async public void SendChatMessage(TwitchAPI _TwitchAPI, string senderId, string broadcasterId, string message, string? parentResponseMessageId = null, bool sendMessageAsChatBot = false)
+        {
+            SendChatMessageRequest chatMessageRequest = new SendChatMessageRequest();
+            chatMessageRequest.SenderId = senderId;
+            chatMessageRequest.BroadcasterId = broadcasterId;
+            chatMessageRequest.Message = message;
+
+            if (parentResponseMessageId != null)
+                chatMessageRequest.ReplyParentMessageId = parentResponseMessageId;
+
+            if (sendMessageAsChatBot)
+                chatMessageRequest.ForSourceOnly = true;
+
+            SendChatMessageResponse sendMessageResponse = await _TwitchAPI.Helix.Chat.SendChatMessage(chatMessageRequest);
+
+            foreach (var respInfo in sendMessageResponse.Data)
+            {
+                if (respInfo.IsSent)
+                {
+                    System.Console.WriteLine($"TwitchUtility.SendChatMessage \tMessId:{respInfo.MessageId}\tIsSent:{respInfo.IsSent}");
+                }
+                else
+                {
+                    WPFUtility.WriteToLog($"TwitchUtility.SendChatMessage MESSAGE NOT SENT \ttDropCode:{respInfo.DropReason.Code}\tDropMessage{respInfo.DropReason.Message}");
+                }
             }
         }
     }

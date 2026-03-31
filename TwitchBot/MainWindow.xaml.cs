@@ -1,27 +1,37 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Microsoft.Win32;
+using Microsoft.Windows.Themes;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using NHttp;
-using System.Net.Http;
+using OBSWebsocketDotNet;
+using OBSWebsocketDotNet.Types;
+using System.Collections;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
 using System.Net;
+using System.Net.Http;
+using System.Reflection;
 using System.Windows;
+using System.Windows.Threading;
+using TwitchBot.Utility_Code;
 using TwitchLib.Api;
+using TwitchLib.Api.Auth;
+using TwitchLib.Api.Core.Enums;
+using TwitchLib.Api.Helix.Models.Channels.SendChatMessage;
+using TwitchLib.Api.Helix.Models.Moderation.BanUser;
+using TwitchLib.Api.Helix.Models.Moderation.GetBannedUsers;
+using TwitchLib.Api.Helix.Models.Moderation.GetModerators;
+using TwitchLib.Api.Helix.Models.Streams.CreateStreamMarker;
+using TwitchLib.Api.Helix.Models.Users.GetUsers;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
-using System.IO;
-using System.Diagnostics;
-using System.Windows.Threading;
-using Newtonsoft.Json;
-using OBSWebsocketDotNet;
-using OBSWebsocketDotNet.Types;
-using TwitchLib.Api.Helix.Models.Moderation.BanUser;
-using TwitchLib.Api.Auth;
-using System.Reflection;
-using TwitchLib.Api.Helix.Models.Users.GetUsers;
-using TwitchLib.Api.Helix.Models.Moderation.GetModerators;
-using TwitchLib.Api.Helix.Models.Moderation.GetBannedUsers;
-using TwitchLib.Api.Helix.Models.Streams.CreateStreamMarker;
-using TwitchBot.Utility_Code;
-using System.ComponentModel;
+using static System.Formats.Asn1.AsnWriter;
+using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text;
+using System.Text.Json.Serialization;
 
 //Base functionality taken from HonestDanGames' Youtube channel https://youtu.be/Ufgq6_QhVKw?si=QYBbDl0sYVCy3QVF
 //Provides networking functionality to connect program to Twitch, beginner understanding of setting up API event handlers,
@@ -68,10 +78,6 @@ using System.ComponentModel;
 //Borks itself when losing internet connection (i believe it's from not having a channel being watched?)
 
 
-//look into making bot messages (especially the ads have started messages) viewable only on host channel
-//  don't want to spam shared chat feed with random bot stuff
-
-//button to turn off ad break message when in shared chat
 
 //maybe bar at bottom of screen to track ad break rpogress??
 
@@ -91,21 +97,40 @@ namespace TwitchBot
         }
     }
 
+    public class BotAccountAccessTokenResponse
+    {
+        public string access_token {  get; set; }
+        public string expires_in { get; set; }
+        public string token_type { get; set; }
+        /*
+        "access_token": "jostpf5q0uzmxmkba9iyug38kjtgh",
+        "expires_in": 5011271,
+        "token_type": "bearer"
+        */
+    }
+
     public partial class MainWindow : Window
     {
         //Authentication
         private HttpServer WebServer;
+        private HttpServer WebServerBotAccount;
         private readonly string RedirectUri = "http://localhost:3000";
+        private readonly string RedirectUriBotAccount = "http://localhost:8000";
         private readonly string ClientId = Properties.Settings.Default.clientid;
         private readonly string ClientSecret = Properties.Settings.Default.clientsecret;
+
         private readonly List<string> Scopes = new List<string>
         {
             "chat:read", "chat:edit",
-            "channel:bot", "user:bot",
+            "channel:bot",
             "channel:moderate", "channel:read:subscriptions",  "channel:manage:redemptions", "channel:read:ads", "channel:manage:moderators",
             "moderation:read"
         };      //find more Twitch API scopes at https://dev.twitch.tv/docs/authentication/scopes/
 
+        private readonly List<string> BotAccountScopes = new List<string>
+        {
+            "user:read:chat", "user:write:chat", "user:bot"
+        };
 
 
         //WPF
@@ -115,8 +140,6 @@ namespace TwitchBot
         private TwitchClient _TwitchClient;
         private TwitchAPI _TwitchAPI;
         //Look for EventSub events in "WebsocketHostedServices.cs". Handles things like points redeems and ad break triggers.
-
-        private readonly string BOTNAME = "CakeBot___";
 
         private TwitchChatCommands _TwitchChatCommands;
 
@@ -138,8 +161,6 @@ namespace TwitchBot
         //Cached Variables
         //private string CachedOwnerOfChannelAccessToken = "needsaccesstoken"; //cached due to potentially being needed for API requests
         //private string CachedRefreshToken = "needsrefreshtoken"; //needed to ask Twitch API for new access token
-        private string TwitchChannelName; //needed for bot to join Twitch channel
-        private string TwitchChannelId; //needed for some API requests
 
         //Trigger variables
         public static bool twitchPlaysEnable = false;
@@ -185,7 +206,7 @@ namespace TwitchBot
             {
                 ConnectOnLaunchMenuItem.IsChecked = true;
 
-                StartBot();
+                StartBroadcastBot();
                 RestartBotMenuItem.IsEnabled = true;
                 StopBotMenuItem.IsEnabled = true;
             }
@@ -202,7 +223,7 @@ namespace TwitchBot
         //
         private void StartBotMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            StartBot();
+            StartBroadcastBot();
             RestartBotMenuItem.IsEnabled = true;
             StopBotMenuItem.IsEnabled = true;
         }
@@ -238,7 +259,7 @@ namespace TwitchBot
 
             Log($"\n\nRestarting bot...\n\n");
 
-            StartBot();
+            StartBroadcastBot();
         }
         private void StopBotMenuItem_Click(object sender, RoutedEventArgs e)
         {
@@ -315,7 +336,7 @@ namespace TwitchBot
             await CheckAccessToken();
 
             CreateStreamMarkerRequest markerRequest = new CreateStreamMarkerRequest();
-            markerRequest.UserId = TwitchChannelId;
+            markerRequest.UserId = GlobalObjects.TwitchBroadcasterUserId;
 
             _TwitchAPI.Helix.Streams.CreateStreamMarkerAsync(markerRequest);
         }
@@ -334,31 +355,7 @@ namespace TwitchBot
 
         async private void TestButton_Click(object sender, RoutedEventArgs e)
         {
-            /*
-            foreach(var window in Application.Current.Windows)
-            {
-                Trace.WriteLine($"TEST - {window.GetType}");
-            }
-            */
 
-            GetUsersResponse test1 = await _TwitchAPI.Helix.Users.GetUsersAsync();
-            foreach(var user1 in test1.Users)
-            {
-                Log($"TEST1: {user1.DisplayName}\t{user1.Login}\t{user1.Id}");
-            }
-
-            GetUsersResponse test2 = await _TwitchAPI.Helix.Users.GetUsersAsync(logins: new List<string>(new string[] {BOTNAME}));
-            foreach (var user1 in test2.Users)
-            {
-                Log($"TEST2: {user1.DisplayName}\t{user1.Login}\t{user1.Id}");
-            }
-
-            foreach (var joinedChannel in _TwitchClient.JoinedChannels)
-            {
-                Log($"Channel: {joinedChannel.Channel}\t{joinedChannel.ChannelState}");
-            }
-
-            Log($"{_TwitchClient.TwitchUsername}");
         }
 
         async private void TestModButton_Click(object sender, RoutedEventArgs e)
@@ -373,7 +370,7 @@ namespace TwitchBot
 
                 List<string> testSearchMods = new List<string>();
                 testSearchMods.Add(usersResult.Users[0].Id);
-                GetModeratorsResponse modsResult = await _TwitchAPI.Helix.Moderation.GetModeratorsAsync(TwitchChannelId);
+                GetModeratorsResponse modsResult = await _TwitchAPI.Helix.Moderation.GetModeratorsAsync(GlobalObjects.TwitchBroadcasterUserId);
 
                 string output = "";
 
@@ -386,11 +383,11 @@ namespace TwitchBot
                 }
                 Log($"Mods: {output}");
 
-                await _TwitchAPI.Helix.Moderation.UnbanUserAsync(TwitchChannelId, TwitchChannelId, usersResult.Users[0].Id);
+                await _TwitchAPI.Helix.Moderation.UnbanUserAsync(GlobalObjects.TwitchBroadcasterUserId, GlobalObjects.TwitchBroadcasterUserId, usersResult.Users[0].Id);
 
-                await _TwitchAPI.Helix.Moderation.AddChannelModeratorAsync(TwitchChannelId, usersResult.Users[0].Id);
+                await _TwitchAPI.Helix.Moderation.AddChannelModeratorAsync(GlobalObjects.TwitchBroadcasterUserId, usersResult.Users[0].Id);
 
-                GetModeratorsResponse modsResult2 = await _TwitchAPI.Helix.Moderation.GetModeratorsAsync(TwitchChannelId);
+                GetModeratorsResponse modsResult2 = await _TwitchAPI.Helix.Moderation.GetModeratorsAsync(GlobalObjects.TwitchBroadcasterUserId);
 
                 output = "";
 
@@ -421,7 +418,7 @@ namespace TwitchBot
 
                 List<string> testSearchMods = new List<string>();
                 testSearchMods.Add(usersResult.Users[0].Id);
-                GetModeratorsResponse modsResult = await _TwitchAPI.Helix.Moderation.GetModeratorsAsync(TwitchChannelId);
+                GetModeratorsResponse modsResult = await _TwitchAPI.Helix.Moderation.GetModeratorsAsync(GlobalObjects.TwitchBroadcasterUserId);
 
                 string output = "";
 
@@ -443,12 +440,12 @@ namespace TwitchBot
 
                 //add specific channel and acting moderator info to current user ban info
                 BanUserResponse result = _TwitchAPI.Helix.Moderation.BanUserAsync(
-                    TwitchChannelId,
-                    TwitchChannelId,
+                    GlobalObjects.TwitchBroadcasterUserId,
+                    GlobalObjects.TwitchBroadcasterUserId,
                     request
                     ).Result;
 
-                GetBannedUsersResponse bannedResult = await _TwitchAPI.Helix.Moderation.GetBannedUsersAsync(TwitchChannelId, testSearchMods);
+                GetBannedUsersResponse bannedResult = await _TwitchAPI.Helix.Moderation.GetBannedUsersAsync(GlobalObjects.TwitchBroadcasterUserId, testSearchMods);
                 output = "";
 
                 foreach (var entry in bannedResult.Data)
@@ -507,12 +504,73 @@ namespace TwitchBot
         //----------------------Initialization Methods----------------------
         //
 
-        void StartBot()
+        //currently have the name (and therefor user id retreival) hardcoded to "cakebot___". change to user-set login if distributing to other people
+        //if updating functionality through messaging bot connection, must provide a 1-time user authorization of the desired scope (e.g. use https://twitchtokengenerator.com/)
+        async void InitializeMessagingBot()
+        {
+            HttpClient messageBotHttpClient = new HttpClient();
+            messageBotHttpClient.BaseAddress = new Uri("https://id.twitch.tv");
+
+            //creating Authorization code grant flow (required to respond as chat bot instead of broadcaster)
+            //https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#authorization-code-grant-flow
+            var requestUri = "oauth2/token?client_id=" +
+                Properties.Settings.Default.clientid + "&client_secret=" + Properties.Settings.Default.clientsecret + "&grant_type=client_credentials";
+
+            using StringContent jsonContent = new(
+                System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    //client_id = ClientIdMessagingBot,
+                    client_id = Properties.Settings.Default.clientid,
+                    //client_secret = ClientSecretMessagingBot,
+                    client_secret = Properties.Settings.Default.clientsecret,
+                    grant_type = "client_credentials"
+                }),
+                Encoding.UTF8,
+                "application/json");
+
+            try
+            {
+                using HttpResponseMessage httpResponse = await messageBotHttpClient.PostAsync(requestUri, jsonContent);
+
+                //dispose HttpClient as no longer used
+                messageBotHttpClient.Dispose();
+
+                //convert returned json into usable object
+                var jsonResponse = await httpResponse.Content.ReadAsStringAsync();
+                WPFUtility.WriteToLog($"RAW: {jsonResponse}");
+                jsonResponse = jsonResponse.ReplaceLineEndings("");
+                WPFUtility.WriteToLog($"REPLACE ENDING: {jsonResponse}");
+                BotAccountAccessTokenResponse result = JsonConvert.DeserializeObject<BotAccountAccessTokenResponse>(jsonResponse);
+
+                if (result != null)
+                {
+                    WPFUtility.WriteToLog($"RESULT: {result.access_token}\t{result.expires_in}\t{result.token_type}");
+                    GlobalObjects._TwitchAPIBotAccount.Settings.ClientId = Properties.Settings.Default.clientid;
+                    GlobalObjects._TwitchAPIBotAccount.Settings.Secret = Properties.Settings.Default.clientsecret;
+
+                    GlobalObjects._TwitchAPIBotAccount.Settings.AccessToken = result.access_token;
+
+                    GetUsersResponse messagingBotLoginAndId = await GlobalObjects._TwitchAPIBotAccount.Helix.Users.GetUsersAsync(logins: new List<string>() { "cakebot___" });
+                    WPFUtility.WriteToLog($"Sanity check: {messagingBotLoginAndId.Users[0].Id}\t{messagingBotLoginAndId.Users[0].DisplayName}");
+                    GlobalObjects.TwitchMessageBotName = messagingBotLoginAndId.Users[0].Login;
+                    GlobalObjects.TwitchMessageBotUserId = messagingBotLoginAndId.Users[0].Id;
+                }
+
+            }
+            catch (Exception ex)
+            {
+                WPFUtility.WriteToLog($"Error initializing messaging bot: {ex.Message}");
+            }
+        }
+
+        void StartBroadcastBot()
         {
             InitializeWebServer();
 
             var authUrl = "https://id.twitch.tv/oauth2/authorize?response_type=code&client_id=" +
                 ClientId + "&redirect_uri=" + RedirectUri + "&scope=" + String.Join("+", Scopes);
+
+            WPFUtility.WriteToLog($"Waiting for user permissions from broadcaster account...");
 
             //launch the above authUrl to connect to twitch, allow permissions, and start the proces of retrieving auth tokens
             try
@@ -554,7 +612,7 @@ namespace TwitchBot
                 ShowRouletteSuccess.IsChecked = false;
         }
 
-        void InitializeWebServer()
+        async void InitializeWebServer()
         {
             //Create local web server (allows for requesting OAUTH token)
             WebServer = new HttpServer();
@@ -573,13 +631,13 @@ namespace TwitchBot
                     {
                         //initialize base TwitchLib API
                         var code = e.Request.QueryString["code"];
-                        var ownerOfChannelAccessAndRefresh = await GetAccessAndRefreshTokens(code);
+                        var ownerOfChannelAccessAndRefresh = await GetAccessAndRefreshTokens(code, Properties.Settings.Default.clientid, Properties.Settings.Default.clientsecret, RedirectUri, "authorization_code");
 
                         Properties.Settings.Default.TwitchAccessToken = ownerOfChannelAccessAndRefresh.Item1; //access token
                         Properties.Settings.Default.TwitchClientReftreshToken = ownerOfChannelAccessAndRefresh.Item2; //refresh token
 
                         SetNameAndIdByOauthedUser(Properties.Settings.Default.TwitchAccessToken).Wait();
-                        InitializeTwitchClient(TwitchChannelName, Properties.Settings.Default.TwitchAccessToken);
+                        InitializeTwitchClient(GlobalObjects.TwitchChannelName, Properties.Settings.Default.TwitchAccessToken);
                         InitializeTwitchAPI(Properties.Settings.Default.TwitchAccessToken);
 
                         //initialize connection to OBS websocket
@@ -588,7 +646,9 @@ namespace TwitchBot
                         //initialize dictionary holding leaderboard to last saved standings
                         rouletteLeaderboard = GetRouletteLeaderboardFromJson();
 
-                        _TwitchChatCommands = new TwitchChatCommands(_TwitchClient, _TwitchAPI, TwitchChannelName, TwitchChannelId, _SpeechSynth, NinjaAPIConnection);
+                        _TwitchChatCommands = new TwitchChatCommands(_TwitchClient, _TwitchAPI, _SpeechSynth, NinjaAPIConnection);
+
+                        InitializeMessagingBot();
                     }
                 }
             };
@@ -617,25 +677,22 @@ namespace TwitchBot
             api.Settings.AccessToken = accessToken;
 
             var oauthedUser = await api.Helix.Users.GetUsersAsync();
-            TwitchChannelId = oauthedUser.Users[0].Id;
 
 
             //GlobalObjects.TwitchBroadcasterUserId = oauthedUser.Users[0].Id;
 
 
-            GetUsersResponse broadcasterUserResponse = await api.Helix.Users.GetUsersAsync(logins:new List<string> {"thecakeisapie__"});
-            GlobalObjects.TwitchBroadcasterUserId = broadcasterUserResponse.Users[0].Id;
+            //GetUsersResponse broadcasterUserResponse = await api.Helix.Users.GetUsersAsync(logins:new List<string> {"thecakeisapie__"});
+            //GlobalObjects.TwitchBroadcasterUserId = broadcasterUserResponse.Users[0].Id;
 
 
-
-
-            TwitchChannelName = oauthedUser.Users[0].Login;
             GlobalObjects.TwitchChannelName = oauthedUser.Users[0].Login;
+            GlobalObjects.TwitchBroadcasterUserId = oauthedUser.Users[0].Id;
 
-            WPFUtility.WriteToLog($"SetNameandId\tId: {TwitchChannelId}\tName:{TwitchChannelName}");
+            WPFUtility.WriteToLog($"SetNameandId\tId: {GlobalObjects.TwitchBroadcasterUserId}\tName:{GlobalObjects.TwitchChannelName}");
         }
 
-        async Task<Tuple<String, String>> GetAccessAndRefreshTokens(string code)
+        async Task<Tuple<String, String>> GetAccessAndRefreshTokens(string code, string ClientId, string ClientSecret, string RedirectUri, string grantType)
         {
             HttpClient client = new HttpClient();
             var values = new Dictionary<string, String>
@@ -643,7 +700,7 @@ namespace TwitchBot
                 { "client_id", ClientId },
                 { "client_secret", ClientSecret },
                 { "code", code },
-                { "grant_type", "authorization_code" },
+                { "grant_type", grantType },
                 { "redirect_uri", RedirectUri }
             };
 
@@ -671,8 +728,8 @@ namespace TwitchBot
             GlobalObjects._TwitchClient = new TwitchClient();
             _TwitchClient = GlobalObjects._TwitchClient;
 
-            //_TwitchClient.Initialize(new ConnectionCredentials(username, accessToken), TwitchChannelName);
-            _TwitchClient.Initialize(new ConnectionCredentials(username, accessToken), "thecakeisapie__");
+            //_TwitchClient.Initialize(new ConnectionCredentials(username, accessToken), "thecakeisapie__");
+            _TwitchClient.Initialize(new ConnectionCredentials(username, accessToken), GlobalObjects.TwitchChannelName);
 
             //Events you want to subscribe to
             _TwitchClient.OnConnected += Client_OnConnected;
@@ -999,6 +1056,11 @@ namespace TwitchBot
             {
                 //WebServer.Stop();
                 WebServer.Dispose();
+            }
+
+            if (WebServerBotAccount != null)
+            {
+                WebServerBotAccount.Dispose();
             }
 
             if (NinjaAPIConnection != null)

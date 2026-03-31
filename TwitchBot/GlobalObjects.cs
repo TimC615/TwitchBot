@@ -13,9 +13,12 @@ namespace TwitchBot
     public class GlobalObjects
     {
         public static TwitchAPI _TwitchAPI = new TwitchAPI();
+        public static TwitchAPI _TwitchAPIBotAccount = new TwitchAPI();
         public static TwitchClient _TwitchClient = null;
-        public static string TwitchBroadcasterUserId = "-1";
-        public static string TwitchChannelName = "";
+        public static string TwitchBroadcasterUserId = null;
+        public static string TwitchChannelName = null;
+        public static string TwitchMessageBotUserId = null;
+        public static string TwitchMessageBotName = null;
 
         public static EventSubSubscription[] EventSubSubscribedEvents = null;
 
