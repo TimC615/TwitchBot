@@ -14,7 +14,6 @@ namespace TwitchBot
     {
         public static TwitchAPI _TwitchAPI = new TwitchAPI();
         public static TwitchAPI _TwitchAPIBotAccount = new TwitchAPI();
-        public static TwitchClient _TwitchClient = null;
         public static string TwitchBroadcasterUserId = null;
         public static string TwitchChannelName = null;
         public static string TwitchMessageBotUserId = null;
@@ -26,5 +25,9 @@ namespace TwitchBot
         public static readonly string ObsTtsTalkingHeadName = "TTS Talking Head";
 
         public static bool botIsActive = false;
+        public static bool twitchPlaysActive = false;
+
+        public static TwitchPlays _TwitchPlays = null;
+        public static TwitchChatCommands _TwitchChatCommands = null;
     }
 }

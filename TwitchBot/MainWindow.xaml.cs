@@ -32,10 +32,12 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text;
 using System.Text.Json.Serialization;
+using TwitchLib.Api.Helix.Models.EventSub;
 
 //Base functionality taken from HonestDanGames' Youtube channel https://youtu.be/Ufgq6_QhVKw?si=QYBbDl0sYVCy3QVF
 //Provides networking functionality to connect program to Twitch, beginner understanding of setting up API event handlers,
 //and printing text responses to Twitch chat
+//Less relivant nowadays as things like dependancy injection to use EventSub events (replacement for PubSub) are required and moved away from IRC channels for receiving chat messages in favour of EventSub
 
 
 //--Used for old web socket connection implementation. Keeping around for now just in case chaos happens--
@@ -63,7 +65,6 @@ using System.Text.Json.Serialization;
 //Can move APINinja code to it's own singleton class
 
 
-
 //Error when pressing "Stop Bot" button
 //triggers error on Line 86 of WebsocketHostedService:
 //"var activeSubscriptions = _TwitchAPI.Helix.EventSub.GetEventSubSubscriptionsAsync().Result;"
@@ -74,10 +75,7 @@ using System.Text.Json.Serialization;
 //BadScopeException: Your request was blocked due to bad credentials (Do you have the right scope for your access token?).
 
 
-
 //Borks itself when losing internet connection (i believe it's from not having a channel being watched?)
-
-
 
 //maybe bar at bottom of screen to track ad break rpogress??
 
@@ -102,11 +100,6 @@ namespace TwitchBot
         public string access_token {  get; set; }
         public string expires_in { get; set; }
         public string token_type { get; set; }
-        /*
-        "access_token": "jostpf5q0uzmxmkba9iyug38kjtgh",
-        "expires_in": 5011271,
-        "token_type": "bearer"
-        */
     }
 
     public partial class MainWindow : Window
@@ -123,14 +116,14 @@ namespace TwitchBot
             "chat:read", "chat:edit",
             "channel:bot",
             "channel:moderate", "channel:read:subscriptions",  "channel:manage:redemptions", "channel:read:ads", "channel:manage:moderators",
-            "moderation:read"
+            "moderation:read",
+            "user:read:chat"
         };      //find more Twitch API scopes at https://dev.twitch.tv/docs/authentication/scopes/
 
         //WPF
         Settings settings;
 
         //TwitchLib
-        private TwitchClient _TwitchClient;
         private TwitchAPI _TwitchAPI;
         //Look for EventSub events in "WebsocketHostedServices.cs". Handles things like points redeems and ad break triggers.
 
@@ -155,11 +148,7 @@ namespace TwitchBot
         //private string CachedOwnerOfChannelAccessToken = "needsaccesstoken"; //cached due to potentially being needed for API requests
         //private string CachedRefreshToken = "needsrefreshtoken"; //needed to ask Twitch API for new access token
 
-        //Trigger variables
-        public static bool twitchPlaysEnable = false;
-
         //Other Objects
-        TwitchPlays TwitchPlaysObj;    //only gets an object when TwitchPlays is enabled
         SpeechSynthesis _SpeechSynth;
 
         //Bot Commands
@@ -231,9 +220,9 @@ namespace TwitchBot
         //Starts countdown if twitch plays is currently off, else disables it
         private void TwitchPlaysButton_Click(object sender, RoutedEventArgs e)
         {
-            if (twitchPlaysEnable)
+            if (GlobalObjects.twitchPlaysActive)
             {
-                twitchPlaysEnable = false;
+                GlobalObjects.twitchPlaysActive = false;
 
                 Log($"Twitch Plays disabled");
                 twitchPlaysButton.Header = "Enable Twitch Plays";
@@ -348,7 +337,15 @@ namespace TwitchBot
 
         async private void TestButton_Click(object sender, RoutedEventArgs e)
         {
+            GetEventSubSubscriptionsRequest testRequest = new GetEventSubSubscriptionsRequest();
 
+            var response = await GlobalObjects._TwitchAPI.Helix.EventSub.GetEventSubSubscriptionsAsync(testRequest);
+
+            foreach (var subscription in response.Subscriptions)
+            {
+                if(!subscription.Status.Equals("websocket_disconnected"))
+                WPFUtility.WriteToLog($"TEST BUTTON {subscription.Status}\t{subscription.Type}");
+            }
         }
 
         async private void TestModButton_Click(object sender, RoutedEventArgs e)
@@ -512,9 +509,7 @@ namespace TwitchBot
             using StringContent jsonContent = new(
                 System.Text.Json.JsonSerializer.Serialize(new
                 {
-                    //client_id = ClientIdMessagingBot,
                     client_id = Properties.Settings.Default.clientid,
-                    //client_secret = ClientSecretMessagingBot,
                     client_secret = Properties.Settings.Default.clientsecret,
                     grant_type = "client_credentials"
                 }),
@@ -530,21 +525,23 @@ namespace TwitchBot
 
                 //convert returned json into usable object
                 var jsonResponse = await httpResponse.Content.ReadAsStringAsync();
-                WPFUtility.WriteToLog($"RAW: {jsonResponse}");
+                //WPFUtility.WriteToLog($"RAW: {jsonResponse}");
                 jsonResponse = jsonResponse.ReplaceLineEndings("");
-                WPFUtility.WriteToLog($"REPLACE ENDING: {jsonResponse}");
+                //WPFUtility.WriteToLog($"REPLACE ENDING: {jsonResponse}");
                 BotAccountAccessTokenResponse result = JsonConvert.DeserializeObject<BotAccountAccessTokenResponse>(jsonResponse);
 
                 if (result != null)
                 {
-                    WPFUtility.WriteToLog($"RESULT: {result.access_token}\t{result.expires_in}\t{result.token_type}");
+                    //WPFUtility.WriteToLog($"RESULT: {result.access_token}\t{result.expires_in}\t{result.token_type}");
                     GlobalObjects._TwitchAPIBotAccount.Settings.ClientId = Properties.Settings.Default.clientid;
                     GlobalObjects._TwitchAPIBotAccount.Settings.Secret = Properties.Settings.Default.clientsecret;
 
                     GlobalObjects._TwitchAPIBotAccount.Settings.AccessToken = result.access_token;
 
                     GetUsersResponse messagingBotLoginAndId = await GlobalObjects._TwitchAPIBotAccount.Helix.Users.GetUsersAsync(logins: new List<string>() { "cakebot___" });
-                    WPFUtility.WriteToLog($"Sanity check: {messagingBotLoginAndId.Users[0].Id}\t{messagingBotLoginAndId.Users[0].DisplayName}");
+
+                    //WPFUtility.WriteToLog($"Sanity check: {messagingBotLoginAndId.Users[0].Id}\t{messagingBotLoginAndId.Users[0].DisplayName}");
+
                     GlobalObjects.TwitchMessageBotName = messagingBotLoginAndId.Users[0].Login;
                     GlobalObjects.TwitchMessageBotUserId = messagingBotLoginAndId.Users[0].Id;
                 }
@@ -630,7 +627,6 @@ namespace TwitchBot
                         Properties.Settings.Default.TwitchClientReftreshToken = ownerOfChannelAccessAndRefresh.Item2; //refresh token
 
                         SetNameAndIdByOauthedUser(Properties.Settings.Default.TwitchAccessToken).Wait();
-                        InitializeTwitchClient(GlobalObjects.TwitchChannelName, Properties.Settings.Default.TwitchAccessToken);
                         InitializeTwitchAPI(Properties.Settings.Default.TwitchAccessToken);
 
                         //initialize connection to OBS websocket
@@ -639,7 +635,7 @@ namespace TwitchBot
                         //initialize dictionary holding leaderboard to last saved standings
                         rouletteLeaderboard = GetRouletteLeaderboardFromJson();
 
-                        _TwitchChatCommands = new TwitchChatCommands(_TwitchClient, _TwitchAPI, _SpeechSynth, NinjaAPIConnection);
+                        GlobalObjects._TwitchChatCommands = new TwitchChatCommands(_TwitchAPI, _SpeechSynth, NinjaAPIConnection);
 
                         InitializeMessagingBot();
                     }
@@ -716,36 +712,6 @@ namespace TwitchBot
             _TwitchAPI.Settings.Secret = ClientSecret;
         }
 
-        void InitializeTwitchClient(string username, string accessToken)
-        {
-            GlobalObjects._TwitchClient = new TwitchClient();
-            _TwitchClient = GlobalObjects._TwitchClient;
-
-            //_TwitchClient.Initialize(new ConnectionCredentials(username, accessToken), "thecakeisapie__");
-            _TwitchClient.Initialize(new ConnectionCredentials(username, accessToken), GlobalObjects.TwitchChannelName);
-
-            //Events you want to subscribe to
-            _TwitchClient.OnConnected += Client_OnConnected;
-            _TwitchClient.OnDisconnected += TwitchClient_OnDisconnected;
-            //_TwitchClient.OnLog += TwitchClient_OnLog; //good for debug
-            _TwitchClient.OnChatCommandReceived += Bot_OnChatCommandReceived;
-            _TwitchClient.OnMessageReceived += Client_OnMessageReceived;
-            _TwitchClient.OnRateLimit += TwitchClient_OnRateLimit;
-            _TwitchClient.OnJoinedChannel += Client_OnJoinedChannel;
-
-            //Other subscription examples
-            //_TwitchClient.OnBanned += Client_OnBanned;
-            //_TwitchClient.OnUserTimedout += Client_OnUserTimedout;
-            //_TwitchClient.OnUserJoined += BotConnection_OnUserJoined;
-            //_TwitchClient.OnUserLeft += BotConnection_OnUserLeft;
-            //_TwitchClient.OnWhisperReceived += Client_OnWhisperReceived;
-            //_TwitchClient.OnNewSubscriber += Client_OnNewSubscriber;
-            //_TwitchClient.OnIncorrectLogin += Client_OnIncorrectLogin;
-            //_TwitchClient.OnWhisperCommandReceived += Bot_OnWhisperCommandReceived;
-
-            _TwitchClient.Connect();
-        }
-
         void InitializeOBSWebSocket()
         {
             GlobalObjects._OBS = new OBSWebsocket();
@@ -778,70 +744,6 @@ namespace TwitchBot
         //
         //----------------------End of Initialization Methods----------------------
         //
-
-        //
-        //----------------------TwitchClient Event Hookups----------------------
-        //
-        private void Client_OnConnected(object sender, OnConnectedArgs e)
-        {
-            Log($"User {e.BotUsername} connected (bot access)");
-            GlobalObjects._TwitchClient.JoinChannel("thecakeisapie__");
-        }
-
-        private void Client_OnJoinedChannel (object sender, OnJoinedChannelArgs e)
-        {
-            Log($"User {e.BotUsername} joined channel {e.Channel}");
-        }
-
-        private void TwitchClient_OnDisconnected(object sender, TwitchLib.Communication.Events.OnDisconnectedEventArgs e)
-        {
-            Log($"OwnerOfChannel OnDisconnected event");
-        }
-
-        private void TwitchClient_OnLog(object sender, TwitchLib.Client.Events.OnLogArgs e)
-        {
-            Log($"OnLog: {e.Data}");
-        }
-
-        private void TwitchClient_OnRateLimit(object sender, OnRateLimitArgs e)
-        {
-            Log($"OnRateLimit - Channel:{e.Channel}\tMessage: {e.Message}");
-        }
-
-
-        async private void Bot_OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)
-        {
-            _TwitchChatCommands.BaseCommandMethod(e.Command);
-        }
-
-        //!!! might need to make multiple threads to act on multiple chat messages simultaniously !!!
-        //potentially add in a rate limit to smooth out commands (better for larger, more constant input volumes)
-        //https://www.dougdoug.com/twitchplays-template-py-3-9-x  example threadpool-enabled bot (albeit in python)
-        private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
-        {
-            if (twitchPlaysEnable)
-            {
-                Log($"OnMessageReceived: {e.ChatMessage.Username.ToLower()} - {e.ChatMessage.Message.ToLower()}");
-                //Keyboard.KeyDownEvent();
-
-                //TwitchPlays.SpeechSynthSync(e.ChatMessage.Message);
-
-                //Twitch plays Skyrim SE
-                TwitchPlaysObj.TwitchPlaysSkyrim(e);
-
-
-                //simple testing to hear how things sound through the speechsynth
-                //TwitchPlays.SpeechSynth(e.ChatMessage.Message.ToString());
-
-                //failed multi-treading idea
-                //ThreadPool.QueueUserWorkItem(TwitchPlays.SpeechSynth, e.ChatMessage.Message) ;
-
-            }
-        }
-        //
-        //----------------------End of TwitchClient Event Hookups----------------------
-        //
-
 
         //
         //----------------------OBS Event Hookups----------------------
@@ -924,8 +826,10 @@ namespace TwitchBot
 
             Thread.Sleep(5000);
 
-            twitchPlaysEnable = true;
-            TwitchPlaysObj = new TwitchPlays();
+            GlobalObjects.twitchPlaysActive = true;
+            
+            if(GlobalObjects._TwitchPlays == null)
+                GlobalObjects._TwitchPlays = new TwitchPlays();
 
             Log($"Twitch Plays now live");
 
@@ -1036,15 +940,6 @@ namespace TwitchBot
 
         void CloseEverything()
         {
-            if (_TwitchClient != null)
-            {
-                //unsure if this is necessary as twitch may have an automatic handler for it _TwitchClient doesn't respond to Twitch after enough time
-                //current implementation seems to freeze bot when closing out window
-                //_TwitchClient.LeaveChannel(GlobalObjects.TwitchChannelName);
-
-                _TwitchClient.Disconnect();
-            }
-
             if (WebServer != null)
             {
                 //WebServer.Stop();

@@ -31,7 +31,7 @@ namespace TwitchBot
     when messages are preferred to be overlapping. threads will automatically be closed once TTS is finished
     */
 
-    class SpeechSynthesis
+    public class SpeechSynthesis
     {
         private static SpeechSynthesis Instance;
 

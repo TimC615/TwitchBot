@@ -16,9 +16,8 @@ using TwitchLib.Api.Helix.Models.Channels.SendChatMessage;
 
 namespace TwitchBot
 {
-    internal class TwitchChatCommands
+    public class TwitchChatCommands
     {
-        TwitchClient _TwitchClient;
         TwitchAPI _TwitchAPI;
 
         SpeechSynthesis _SpeechSynth;
@@ -39,74 +38,59 @@ namespace TwitchBot
             { "lurk", "Have fun lurking!"}
         };
 
-        public TwitchChatCommands(TwitchClient _TwitchClient, TwitchAPI _twitchAPI, 
-            SpeechSynthesis _SpeechSynth, HttpClient NinjaAPIConnection)
+        public TwitchChatCommands(TwitchAPI _twitchAPI, SpeechSynthesis _SpeechSynth, HttpClient NinjaAPIConnection)
         {
-            this._TwitchClient = _TwitchClient;
             this._TwitchAPI = _twitchAPI;
 
             this._SpeechSynth = _SpeechSynth;
             this.NinjaAPIConnection = NinjaAPIConnection;
         }
 
-        async public void BaseCommandMethod(TwitchLib.Client.Models.ChatCommand e)
+        async public void BaseCommandMethod(TwitchLib.EventSub.Core.SubscriptionTypes.Channel.ChannelChatMessage e)
         {
-            /*
-            SendChatMessageRequest test = new SendChatMessageRequest();
-            test.Message = "This is a test message";
-            test.BroadcasterId = TwitchChannelId;   //set this to my ID so it sends the message to my chat
-            test.SenderId = TwitchChannelId;    //set this to the ID of CakeBot___ to respond through that account
-            test.ForSourceOnly = true;  //IMPORTANT. use this with ONLY an app access token (not user access) to make it so messages are sent to just my channel in a shared chat and to add the bot badge to the senderId account
+            //contains an array of the user's whole message. when compared to _TwitchClient implementation, array[0] is the command itself and all following array indexes are arguments
+            string[] messageInputs = e.Message.Text.ToLower().Split(' ');
+            string cleanedCommandName = messageInputs[0].Remove(0, 1);  //removes the leading '!' from the first element of the array
 
-            await GlobalObjects._TwitchAPI.Helix.Chat.SendChatMessage(test, await GlobalObjects._TwitchAPI.Auth.GetAccessTokenAsync());
-            */
-
-            string commandText = e.CommandText.ToLower();
-
-            //helps avoid firing unnecessarily when streaming with others using linked chats (must be in bot's stream to trigger chat commands)
-            //if (e.ChatMessage.Channel != GlobalObjects.TwitchChannelName)
-            //    return;
 
             //2 ways to deal with commands: if/switch statements OR dictionary lookups
 
             //responses are added to dictionary in lowercase
-            if (CommandsStaticResponses.TryGetValue(commandText, out string? value))
+            if (CommandsStaticResponses.TryGetValue(cleanedCommandName, out string? value))
             {
-                TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, value, e.ChatMessage.Id, true);
+                TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, value, e.MessageId, true);
             }
-
             //more complex comands
             else
             {
                 //return list of current bot commands (added different command to avoid also showing commands for other Twitch bots)
-                if(commandText.Equals("commands") || commandText.Equals("botmenu"))
+                if(cleanedCommandName.Equals("commands") || cleanedCommandName.Equals("botmenu"))
                 {
                     string helpMessage = "The current chat commands are: help, about, discord, twitter, lurk, joke, fact, roll, roulette, rouletteleaderboard, and 1st";
-                    TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, helpMessage, e.ChatMessage.Id, true);
+                    TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, helpMessage, e.MessageId, true);
                 }
 
-
                 //Tells user how to use commands
-                if (commandText.Equals("help"))
-                    HelpCommands(e);
+                if (cleanedCommandName.Equals("help"))
+                    HelpCommands(messageInputs, e.MessageId);
 
                 //roll a random dX sided die
                 //command text only looks for the first word after the ! so it automatically ignores additional chars after command
-                if (commandText.Equals("roll"))
+                if (cleanedCommandName.Equals("roll"))
                 {
-                    if(e.ArgumentsAsList.Count >= 1)
+                    if(messageInputs.Length >= 2)
                     {
-                        RollCommand(e);
+                        RollCommand(messageInputs, e.MessageId);
                     }
                     else
                     {
                         string inputErrorMessage = "Make sure you add in the number of dice to roll and the number of sides on a die (e.g. \"!roll 2d6\")";
-                        TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, inputErrorMessage, e.ChatMessage.Id, true);
+                        TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, inputErrorMessage, e.MessageId, true);
                     }
                 }
 
                 //Grab random fact from https://api-ninjas.com/
-                if (commandText.Equals("fact"))
+                if (cleanedCommandName.Equals("fact"))
                 {
                     if(NinjaAPIConnection == null)
                     {
@@ -119,7 +103,7 @@ namespace TwitchBot
                 }
 
                 //Grab random dad joke from https://api-ninjas.com/
-                if (commandText.Equals("joke"))
+                if (cleanedCommandName.Equals("joke"))
                 {
                     if (NinjaAPIConnection == null)
                     {
@@ -132,17 +116,17 @@ namespace TwitchBot
                 }
 
                 //Random chance for user to time themself out. If user has roles, automatically re-apply once timeout is done
-                if (commandText.Equals("roulette"))
+                if (cleanedCommandName.Equals("roulette"))
                 {
                     
                     //Spin the wheel x times (default is once)
-                    if (e.ArgumentsAsList.Count == 0)
+                    if (messageInputs.Length == 1)
                         RouletteCommand(e);
                     else
                     {
                         try
                         {
-                            int totalSpins = Int32.Parse(e.ArgumentsAsList[0]);
+                            int totalSpins = Int32.Parse(messageInputs[1]);
 
                             if (totalSpins < 1)
                                 RouletteCommand(e, 1);
@@ -158,43 +142,41 @@ namespace TwitchBot
                 }
 
                 //Displays a list of the chatters with the most timeout roulette spins without a timeout
-                if (commandText.Equals("rouletteleaderboard"))
+                if (cleanedCommandName.Equals("rouletteleaderboard"))
                 {
-                    RouletteLeaderboardCommand(e);
+                    RouletteLeaderboardCommand(e.MessageId);
                 }
 
 
-                if (commandText.Equals("first") || commandText.Equals("1st"))
+                if (cleanedCommandName.Equals("first") || cleanedCommandName.Equals("1st"))
                 {
-                    FirstCommand(e);
+                    FirstCommand(e.ChatterUserId, e.ChatterUserName, e.MessageId);
                 }
 
                 //Tell user what skyrim spawn commands are avaialble (only when Twitch Plays is active)
-                if (commandText.Equals("skyrim") && MainWindow.twitchPlaysEnable)
+                if (cleanedCommandName.Equals("skyrim") && GlobalObjects.twitchPlaysActive)
                 {
                     string skyrimCommands = "You can mess with skyrim by saying any of the following: forward, back, stop, left, right, jump, " +
                         "cheese, soup, wine, potions, rabbits, skeevers, bears, lydia, spiders, dragons, cheesemageddon, and soupmageddon";
 
-                    TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, skyrimCommands, e.ChatMessage.Id, true);
+                    TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, skyrimCommands, e.MessageId, true);
                 }
             }
         }
 
-        void HelpCommands(TwitchLib.Client.Models.ChatCommand e)
+        void HelpCommands(string[] messageInput, string parentMessageId)
         {
-            List<string> test = e.ArgumentsAsList;
-
             //checks if user is asking for help on a specific command or the help command itself
-            if (e.ArgumentsAsList.Count == 0)
+            if (messageInput.Length == 1)
             {
                 string defaultHelpMessage = "Type \"!help <command>\" to see how you can use it (E.g. !help roll)";
-                TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, defaultHelpMessage, e.ChatMessage.Id, true);
+                TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, defaultHelpMessage, parentMessageId, true);
             }
             else
             {
                 try
                 {
-                    string helpSpecifier = e.ArgumentsAsList[0].ToLower();
+                    string helpSpecifier = messageInput[1];
 
                     string? helpMessage = null;
                     switch (helpSpecifier)
@@ -225,7 +207,7 @@ namespace TwitchBot
                     //returns a message only if user is asking for help with an actual command
                     if (!String.IsNullOrEmpty(helpMessage))
                     {
-                        TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, helpMessage, e.ChatMessage.Id, true);
+                        TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, helpMessage, parentMessageId, true);
                     }
                 }
                 catch (Exception except)
@@ -235,53 +217,61 @@ namespace TwitchBot
             }
         }
 
-        void RouletteCommand(TwitchLib.Client.Models.ChatCommand e, int totalSpins = 1)
+        void RouletteCommand(TwitchLib.EventSub.Core.SubscriptionTypes.Channel.ChannelChatMessage e, int totalSpins = 1)
         {
             try
             {
                 //Log($"Roulette triggered by {e.ChatMessage.DisplayName}");
 
-                Random random = new Random();
-
-                if (e.ChatMessage.IsMe || e.ChatMessage.IsBroadcaster || e.ChatMessage.IsStaff)
+                if (e.IsBroadcaster || e.IsStaff)
                 {
-                    string rouletteInputError = $"Sorry {e.ChatMessage.Username}, you're not able to be timed out so you can't spin the roulette";
-                    TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, rouletteInputError, e.ChatMessage.Id, true);
+                    string rouletteInputError = $"Sorry {e.ChatterUserName}, you're not able to be timed out so you can't spin the roulette";
+                    TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, rouletteInputError, e.MessageId, true);
 
                     throw new Exception("User tried to timeout as restricted role");
                 }
 
+                Random random = new Random();
                 for (int spin = 1; spin <= totalSpins; spin++)
                 {
                     if (random.Next(1, 11) == 1)
                     {
+                        int totalTimeoutLength;
+
+                        //checks if mathematical timeout for user is higher than max allowed timeout by twitch's api
                         if (totalSpins * TIMEOUTROULETTELENGTH > MAXTIMEOUTTIMEALLOWED)
-                            RouletteTimeout(e, MAXTIMEOUTTIMEALLOWED);
+                            totalTimeoutLength = MAXTIMEOUTTIMEALLOWED;
+                        //checks if total timeout length is negative, if so then timeout for 1 spin's worth
                         else if (totalSpins * TIMEOUTROULETTELENGTH < 1)
-                            RouletteTimeout(e, TIMEOUTROULETTELENGTH);
+                            totalTimeoutLength = TIMEOUTROULETTELENGTH;
+                        //default situation calculating a user's total timeout time
                         else
-                            RouletteTimeout(e, totalSpins * TIMEOUTROULETTELENGTH);
+                            totalTimeoutLength = totalSpins * TIMEOUTROULETTELENGTH;
+
+                        RouletteTimeout(e.ChatterUserLogin, e.ChatterUserId, e.ChatterUserName, e.MessageId, totalTimeoutLength, e.IsModerator);
+
+                        //stops looping through parent for loop since user has failed at least 1 of the x spins they asked for
                         return;
                     }
                 }
 
                 //only reaches here if user succeeds all roulette spins
                 //check if user is in leaderboard already
-                if (MainWindow.rouletteLeaderboard.ContainsKey(e.ChatMessage.Username))
+                if (MainWindow.rouletteLeaderboard.ContainsKey(e.ChatterUserLogin))
                 {
-                    MainWindow.rouletteLeaderboard[e.ChatMessage.Username] += totalSpins;
+                    MainWindow.rouletteLeaderboard[e.ChatterUserLogin] += totalSpins;
                 }
                 else
-                    MainWindow.rouletteLeaderboard.Add(e.ChatMessage.Username, 1);
+                    MainWindow.rouletteLeaderboard.Add(e.ChatterUserLogin, 1);
 
-                int rouletteLeaderboardCount = MainWindow.rouletteLeaderboard[e.ChatMessage.Username];
+                int rouletteLeaderboardCount = MainWindow.rouletteLeaderboard[e.ChatterUserLogin];
 
 
                 //helps to avoid spamming the chat if roulette command is too popular
                 if (Properties.Settings.Default.DisplayRouletteSuccessMessage)
                 {
-                    string rouletteSurvivalMessage = $"{e.ChatMessage.DisplayName} has survived the timeout roulette {rouletteLeaderboardCount} time(s)";
-                    TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, rouletteSurvivalMessage, e.ChatMessage.Id, true);
+                    string rouletteSurvivalMessage = $"{e.ChatterUserName} has survived the timeout roulette {rouletteLeaderboardCount} time(s)";
+                    TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, rouletteSurvivalMessage, e.MessageId, true);
                 }
 
                 SaveRouletteLeaderboardToJson();
@@ -292,30 +282,30 @@ namespace TwitchBot
             }
         }
 
-        async void RouletteTimeout(TwitchLib.Client.Models.ChatCommand e, int timeoutLength)
+        async void RouletteTimeout(string senderUsername, string senderUserId, string senderDisplayName, string parentMessageId, int timeoutLength, bool isModerator)
         {
             MainWindow.rouletteLeaderboard = GetRouletteLeaderboardFromJson();
 
             await TwitchUtility.CheckAccessToken();
 
             int leaderboardSpins = 0;
-            if (MainWindow.rouletteLeaderboard.ContainsKey(e.ChatMessage.Username))
+            if (MainWindow.rouletteLeaderboard.ContainsKey(senderUsername))
             {
-                leaderboardSpins = MainWindow.rouletteLeaderboard[e.ChatMessage.Username];
-                MainWindow.rouletteLeaderboard.Remove(e.ChatMessage.Username);
+                leaderboardSpins = MainWindow.rouletteLeaderboard[senderUsername];
+                MainWindow.rouletteLeaderboard.Remove(senderUsername);
             }
 
             string timeoutRouletteMessage = "";
             if(leaderboardSpins == 0)
-                timeoutRouletteMessage = $"{e.ChatMessage.DisplayName} won the roulette and timed themselves out for {timeoutLength} seconds after surviving {leaderboardSpins} spins!";
+                timeoutRouletteMessage = $"{senderDisplayName} won the roulette and timed themselves out for {timeoutLength} seconds after surviving {leaderboardSpins} spins!";
             else
-                timeoutRouletteMessage = $"{e.ChatMessage.DisplayName} won the roulette and timed themselves out for {timeoutLength} seconds on their first spin!";
+                timeoutRouletteMessage = $"{senderDisplayName} won the roulette and timed themselves out for {timeoutLength} seconds on their first spin!";
 
-            TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, timeoutRouletteMessage, e.ChatMessage.Id, true);
+            TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, timeoutRouletteMessage, parentMessageId, true);
 
             //ban info for current user
             BanUserRequest request = new BanUserRequest();
-            request.UserId = e.ChatMessage.UserId;
+            request.UserId = senderUserId;
             request.Reason = "Congrats! You won the timeout roulette!";
             request.Duration = timeoutLength;
 
@@ -330,16 +320,16 @@ namespace TwitchBot
 
             SaveRouletteLeaderboardToJson();
 
-            if (e.ChatMessage.IsModerator)
+            if (isModerator)
             {
                 new Thread(delegate ()
                 {
-                    TwitchUtility.ReinstateModRole(_TwitchAPI, GlobalObjects.TwitchBroadcasterUserId, e.ChatMessage.UserId, e.ChatMessage.Username, TIMEOUTROULETTELENGTH);
+                    TwitchUtility.ReinstateModRole(_TwitchAPI, GlobalObjects.TwitchBroadcasterUserId, senderUserId, senderUsername, TIMEOUTROULETTELENGTH);
                 }).Start();
             }
         }
 
-        void RouletteLeaderboardCommand(TwitchLib.Client.Models.ChatCommand e)
+        void RouletteLeaderboardCommand(string parentMessageId)
         {
             //var topGroups = MainWindow.rouletteLeaderboard.OrderByDescending(x => x.Value).GroupBy(x => x.Value).Take(3);
 
@@ -349,7 +339,7 @@ namespace TwitchBot
             if (topLeaderboardSpots.Count == 0)
             {
                 string emptyLeaderboardMessage = "There are currently no people listed on the timeout roulette leaderboard. Make sure to have at least 1 spin without being timed out to show up here!";
-                TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, emptyLeaderboardMessage, e.ChatMessage.Id, true);
+                TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, emptyLeaderboardMessage, parentMessageId, true);
             }
             else
             {
@@ -364,7 +354,7 @@ namespace TwitchBot
 
                 leaderboardOutput = leaderboardOutput.Remove(leaderboardOutput.LastIndexOf(","), 1);
 
-                TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, leaderboardOutput, e.ChatMessage.Id, true);
+                TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, leaderboardOutput, parentMessageId, true);
             }
         }
 
@@ -391,15 +381,12 @@ namespace TwitchBot
             return topPositions;
         }
 
-
-        void RollCommand(TwitchLib.Client.Models.ChatCommand e)
+        void RollCommand(string[] messageInput, string parentMessageId)
         {
             try
             {
                 //retrieve and split roll command into 2 segments: *number of dice* and *size of die*
-                List<string> rollCommand = e.ArgumentsAsList;
-
-                string rollInput = rollCommand[0].ToLower();
+                string rollInput = messageInput[1];
                 string[] rollParams;
 
                 if (!rollInput.Contains('d'))
@@ -429,7 +416,7 @@ namespace TwitchBot
                     WPFUtility.WriteToLog("Roll command error converting param 0: " + ex.Message);
 
                     string rollInputErrorMessage = "The number of dice to roll needs to be a whole number greater than or equal to 1";
-                    TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, rollInputErrorMessage, e.ChatMessage.Id, true);
+                    TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, rollInputErrorMessage, parentMessageId, true);
 
                     diceToRoll = -1;
                 }
@@ -443,7 +430,7 @@ namespace TwitchBot
                         if (sizeOfDie <= 1)
                         {
                             string rollInputErrorMessage = "The size of the die to roll needs to be a whole number greater than 1";
-                            TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, rollInputErrorMessage, e.ChatMessage.Id, true);
+                            TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, rollInputErrorMessage, parentMessageId, true);
                         }
                         //roll dice
                         else
@@ -462,7 +449,7 @@ namespace TwitchBot
                             else
                                 rollResultMessage = $"You rolled: {total}";
 
-                            TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, rollResultMessage, e.ChatMessage.Id, true);
+                            TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, rollResultMessage, parentMessageId, true);
                         }
                     }
                     catch (Exception ex)
@@ -477,7 +464,7 @@ namespace TwitchBot
             }
         }
 
-        void FirstCommand(TwitchLib.Client.Models.ChatCommand e)
+        void FirstCommand(string userId, string userDisplayName, string parentMessageId)
         {
             Dictionary<string, int> firstRedeemLeaderboard = null;
             try
@@ -498,20 +485,16 @@ namespace TwitchBot
 
             if (firstRedeemLeaderboard != null)
             {
-                string username = e.ChatMessage.DisplayName;
-                string userID = e.ChatMessage.UserId;
-
                 string firstResultMessage = "";
 
-                if (firstRedeemLeaderboard.ContainsKey(userID))
-                    firstResultMessage = $"{username} has been first {firstRedeemLeaderboard[userID]} time(s)!";
+                if (firstRedeemLeaderboard.ContainsKey(userId))
+                    firstResultMessage = $"{userDisplayName} has been first {firstRedeemLeaderboard[userId]} time(s)!";
                 else
-                    firstResultMessage = $"{username} hasn't been first before.";
+                    firstResultMessage = $"{userDisplayName} hasn't been first before.";
 
-                TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, firstResultMessage, e.ChatMessage.Id, true);
+                TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, firstResultMessage, parentMessageId, true);
             }
         }
-
 
         public Dictionary<string, int> GetRouletteLeaderboardFromJson()
         {

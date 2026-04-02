@@ -18,6 +18,13 @@ namespace TwitchBot.Utility_Code
         {
             try
             {
+                if (String.IsNullOrEmpty(message))
+                    throw new Exception("Tried to write to wpf log with either a null or empty string");
+
+                if (MainWindow.AppWindow == null)
+                    throw new Exception("Tried to write to wpf log before MainWindow.AppWindow was initialized");
+
+
                 Trace.WriteLine(DateTime.Now.ToString() + "\t" + message);
 
                 MainWindow.AppWindow.Dispatcher.BeginInvoke(() =>

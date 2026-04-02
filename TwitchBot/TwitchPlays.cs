@@ -19,7 +19,7 @@ namespace TwitchBot
         public static readonly int SPEECHSYNTH_RATE = -2;
     }
 
-    internal class TwitchPlays
+    public class TwitchPlays
     {
         //SimulateKeyPress SimKeyPress = new SimulateKeyPress();
         InputSimulator inputSim = new InputSimulator();
@@ -136,7 +136,7 @@ namespace TwitchBot
         }
 
         //Twitch plays Skyrim SE
-        public void TwitchPlaysSkyrim(OnMessageReceivedArgs e)
+        public void TwitchPlaysSkyrim(TwitchLib.EventSub.Core.Models.Chat.ChatMessage e)
         {
             //MainWindow.Log("TwitchPlays triggered and read: " + e.ChatMessage);
             //Trace.WriteLine("TwitchPlays triggered and read: " + e.ChatMessage);
@@ -158,10 +158,9 @@ namespace TwitchBot
             if (skyrimProcess != null)
             {
                 IntPtr handle = skyrimProcess.Handle;
-                Trace.WriteLine("TwitchPlaysSkyrim received: " + e.ChatMessage.Message);
+                Trace.WriteLine("TwitchPlaysSkyrim received: " + e.Text);
 
-                string input = e.ChatMessage.Message.ToLower();
-                string[] command = e.ChatMessage.Message.ToLower().Split(' ');
+                string input = e.Text.ToLower();
 
                 //switch (command[1])
                 switch (input)
