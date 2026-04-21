@@ -79,6 +79,11 @@ using TwitchLib.Api.Helix.Models.EventSub;
 
 //maybe bar at bottom of screen to track ad break rpogress??
 
+
+
+
+//!1st [username] command to pull the number of times a specific user has been first
+
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
 {
@@ -116,7 +121,7 @@ namespace TwitchBot
             "chat:read", "chat:edit",
             "channel:bot",
             "channel:moderate", "channel:read:subscriptions",  "channel:manage:redemptions", "channel:read:ads", "channel:manage:moderators",
-            "moderation:read",
+            "moderation:read", "moderator:manage:banned_users",
             "user:read:chat"
         };      //find more Twitch API scopes at https://dev.twitch.tv/docs/authentication/scopes/
 
@@ -132,8 +137,6 @@ namespace TwitchBot
 
         private static readonly int TIMEOUTROULETTELENGTH = 30;      //timeout length, in seconds
         private static readonly int TIMEOUTROULETTETOPPOSITIONSTODISPLAY = 3;   //used to determine max number of results to show for leaderboard display
-        
-        public static Dictionary<string, int> rouletteLeaderboard;
 
         private readonly string ROULETTEJSONFILENAME = @"rouletteleaderboard.json";
         private static readonly string FIRSTREDEEMSJSONFILENAME = @"firstredeemsleaderboard.json";
@@ -337,15 +340,7 @@ namespace TwitchBot
 
         async private void TestButton_Click(object sender, RoutedEventArgs e)
         {
-            GetEventSubSubscriptionsRequest testRequest = new GetEventSubSubscriptionsRequest();
-
-            var response = await GlobalObjects._TwitchAPI.Helix.EventSub.GetEventSubSubscriptionsAsync(testRequest);
-
-            foreach (var subscription in response.Subscriptions)
-            {
-                if(!subscription.Status.Equals("websocket_disconnected"))
-                WPFUtility.WriteToLog($"TEST BUTTON {subscription.Status}\t{subscription.Type}");
-            }
+            //rouletteLeaderboard = GetRouletteLeaderboardFromJson();
         }
 
         async private void TestModButton_Click(object sender, RoutedEventArgs e)
@@ -631,9 +626,6 @@ namespace TwitchBot
 
                         //initialize connection to OBS websocket
                         InitializeOBSWebSocket();
-
-                        //initialize dictionary holding leaderboard to last saved standings
-                        rouletteLeaderboard = GetRouletteLeaderboardFromJson();
 
                         GlobalObjects._TwitchChatCommands = new TwitchChatCommands(_TwitchAPI, _SpeechSynth, NinjaAPIConnection);
 
