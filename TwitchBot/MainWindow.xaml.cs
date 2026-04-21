@@ -77,13 +77,9 @@ using TwitchLib.Api.Helix.Models.EventSub;
 
 //Borks itself when losing internet connection (i believe it's from not having a channel being watched?)
 
-//maybe bar at bottom of screen to track ad break rpogress??
+//maybe bar at bottom of screen to track ad break progress??
 
-
-
-
-//!1st [username] command to pull the number of times a specific user has been first
-
+//add more "Twitch Plays" interactivity but, with low viewer counts, steer it more towards a "Twitch Interferes" as opposed to a full on twitch plays
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
 {

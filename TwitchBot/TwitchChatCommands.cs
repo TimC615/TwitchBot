@@ -13,6 +13,7 @@ using System.Net.Http;
 using System.IO;
 using TwitchLib.Api;
 using TwitchLib.Api.Helix.Models.Channels.SendChatMessage;
+using TwitchLib.Api.Helix.Models.Users.GetUsers;
 
 namespace TwitchBot
 {
@@ -157,10 +158,34 @@ namespace TwitchBot
                     RouletteLeaderboardCommand(e.MessageId);
                 }
 
-
                 if (cleanedCommandName.Equals("first") || cleanedCommandName.Equals("1st"))
                 {
-                    FirstCommand(e.ChatterUserId, e.ChatterUserName, e.MessageId);
+                    if(messageInputs.Length == 1)
+                        FirstCommand(e.ChatterUserId, e.ChatterUserName, e.MessageId);
+                    else {
+                        try
+                        {
+                            if (string.IsNullOrEmpty(messageInputs[1]))
+                                throw new Exception($"User tried to search for a user with a null or empty string");
+
+                            GetUsersResponse rouletteUsersResponse = await GlobalObjects._TwitchAPI.Helix.Users.GetUsersAsync(logins: new List<string> { $"{messageInputs[1].ToLower()}" });
+
+                            if (rouletteUsersResponse == null || rouletteUsersResponse.Users.Length == 0)
+                            {
+                                string outputMessage = $"No users could be found with the name \"{messageInputs[1]}\" on Twitch";
+                                TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, outputMessage, e.MessageId, true);
+
+                                throw new Exception($"No users returned by Twitch after searching with command prompt \"{messageInputs[1]}\"");
+                            }
+
+                            FirstCommand(rouletteUsersResponse.Users[0].Id, rouletteUsersResponse.Users[0].DisplayName, e.MessageId);
+                        }
+                        catch (Exception except)
+                        {
+                            WPFUtility.WriteToLog($"First command: {except.Message}");
+                            return;
+                        }
+                    }
                 }
 
                 //Tell user what skyrim spawn commands are avaialble (only when Twitch Plays is active)
@@ -197,19 +222,26 @@ namespace TwitchBot
                         case "lurk":
                         case "fact":
                         case "joke":
-                        case "1st":
-                        case "first":
                             helpMessage = "Enter \"!" + helpSpecifier + "\" and I'll do all the rest";
                             break;
+
+                        case "1st":
+                        case "first":
+                            helpMessage = "Enter \"!1st\" to see the number of times you've been first or enter \"!1st [username]\" to see how many times someone else has been first";
+                            break;
+
                         case "roll":
                             helpMessage = "Enter \"!roll d<number of sides>\" to roll a single die or \"!roll <number of dice>d<number of sides>\" to roll multiple dice! (e.g. !roll d6) or !roll 3d20";
                             break;
+
                         case "roulette":
                             helpMessage = "Enter \"!roulette\" for a chance to time yourself out for " + TIMEOUTROULETTELENGTH + " seconds or add a number afterwards to roll multiple times in a row!";
                             break;
+
                         case "rouletteleaderboard":
                             helpMessage = "Enter \"!rouletteleaderboard\" to see who has the highest active streaks on the timeout roulette wheel!";
                             break;
+
                         default:
                             break;
                     }
@@ -346,7 +378,6 @@ namespace TwitchBot
             rouletteLeaderboard = GetRouletteLeaderboardFromJson(); 
 
             List<RouletteLeaderboardPosition> topLeaderboardSpots = GetTopRouletteLeaderboardPositions(rouletteLeaderboard);
-
 
             if (topLeaderboardSpots.Count == 0)
             {
