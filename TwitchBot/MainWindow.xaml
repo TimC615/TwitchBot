@@ -33,6 +33,7 @@
                     <Separator></Separator>
                     
                     <MenuItem Name="SpeechSynthClearAllPrompts" Header="_Clear TTS Queue" HorizontalAlignment="Left" IsEnabled="False" Click="ClearAllTTSPromptsMenuItem_Click"/>
+                    <MenuItem Name="NinjaApiSilenceTTS" Header="_Silence Ninja API TTS" HorizontalAlignment="Left" IsEnabled="False" IsCheckable="True" Checked="SilenceNinjaApiTTSMenuItem_Checked" Unchecked="SilenceNinjaApiTTSMenuItem_Unchecked"/>
                 </MenuItem>
                 
                 <MenuItem Header="_OBS">
@@ -41,7 +42,7 @@
                 </MenuItem>
 
                 <MenuItem Header="_Chat Commands">
-                    <MenuItem Name="ShowRouletteSuccess" Header="_Display Roulette Success Message" HorizontalAlignment="Left" IsCheckable="True" Checked="ShowRouletteSuccessMenuItem_Checked" Unchecked="ShowRouletteSuccessMenuItem_Unchecked"/>
+                    <MenuItem Name="ShowRouletteSuccess" Header="_Display Roulette Success Message" HorizontalAlignment="Left" IsEnabled="False" IsCheckable="True" Checked="ShowRouletteSuccessMenuItem_Checked" Unchecked="ShowRouletteSuccessMenuItem_Unchecked"/>
                 </MenuItem>
 
                 <MenuItem Header="_Advanced">

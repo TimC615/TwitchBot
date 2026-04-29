@@ -80,6 +80,12 @@ using TwitchLib.Api.Helix.Models.EventSub;
 //maybe bar at bottom of screen to track ad break progress??
 
 //add more "Twitch Plays" interactivity but, with low viewer counts, steer it more towards a "Twitch Interferes" as opposed to a full on twitch plays
+//look into having ui control of which game is triggered by "Twitch Plays" as opposed to having to manually control it through code (only needed if twitch plays is more commonly used/more game funtionality implemented)
+
+//add ability to turn off fact/joke commands. (stops ability to spam it relentlessly)
+//maybe just turn off tts functionaity
+
+//1st leaderboard? show probably just the top 3 people. (may be able to reuse roulette leaderboard code or even turn it into a method both leaderboards call)
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
 {
@@ -236,28 +242,20 @@ namespace TwitchBot
 
         private void RestartBotMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            CloseEverything();
+            WPFUtility.WriteToLog($"\n\nRestarting bot...\n\n");
 
-            Log($"\n\nRestarting bot...\n\n");
+            DisableUIElements();
+            CloseEverything();
 
             StartBroadcastBot();
         }
         private void StopBotMenuItem_Click(object sender, RoutedEventArgs e)
         {
+            WPFUtility.WriteToLog($"\n\nStopping bot...\n\n");
+
+            DisableUIElements();
+
             CloseEverything();
-
-            Log($"\n\nBot has been stopped...\n\n");
-
-            ConnectToTwitch.IsEnabled = true;
-            RestartBotMenuItem.IsEnabled = false;
-            StopBotMenuItem.IsEnabled = false;
-
-            SpeechSynthPauseResume.IsEnabled = false;
-            SpeechSynthClearAllPrompts.IsEnabled = false;
-            twitchPlaysButton.IsEnabled = false;
-            CheckCurrentAccessToken.IsEnabled = false;
-
-            TestButton.IsEnabled = false;
         }
 
         private void ConnectBotOnLaunchMenuItem_Checked(object sender, RoutedEventArgs e)
@@ -299,6 +297,18 @@ namespace TwitchBot
             _SpeechSynth.ClearAllSpeechSynthAsyncPrompts();
         }
 
+        private void SilenceNinjaApiTTSMenuItem_Checked(object sender, RoutedEventArgs e)
+        {
+            Properties.Settings.Default.SilenceNinjaApiTTS = true;
+            Properties.Settings.Default.Save();
+        }
+
+        private void SilenceNinjaApiTTSMenuItem_Unchecked(object sender, RoutedEventArgs e)
+        {
+            Properties.Settings.Default.SilenceNinjaApiTTS = false;
+            Properties.Settings.Default.Save();
+        }
+
         private void ConnectOBSMenuItem_Click(object sender, RoutedEventArgs e)
         {
             InitializeOBSWebSocket();
@@ -336,7 +346,7 @@ namespace TwitchBot
 
         async private void TestButton_Click(object sender, RoutedEventArgs e)
         {
-            //rouletteLeaderboard = GetRouletteLeaderboardFromJson();
+            WPFUtility.WriteToLog($"TEST BUTTON: SilenceNinjaApiTTS flag = {Properties.Settings.Default.SilenceNinjaApiTTS}");
         }
 
         async private void TestModButton_Click(object sender, RoutedEventArgs e)
@@ -587,7 +597,14 @@ namespace TwitchBot
             //testing button
             TestButton.IsEnabled = true;
 
+            ShowRouletteSuccess.IsEnabled = true;
             if (Properties.Settings.Default.DisplayRouletteSuccessMessage)
+                ShowRouletteSuccess.IsChecked = true;
+            else
+                ShowRouletteSuccess.IsChecked = false;
+
+            NinjaApiSilenceTTS.IsEnabled = true;
+            if (Properties.Settings.Default.SilenceNinjaApiTTS)
                 ShowRouletteSuccess.IsChecked = true;
             else
                 ShowRouletteSuccess.IsChecked = false;
@@ -924,6 +941,23 @@ namespace TwitchBot
                 Log($"Read from roulette leaderboard JSON error: {except.Message}");
                 return new Dictionary<string, int>();
             }
+        }
+
+        //used when bot is either stopping or restarting (keeps things in one place as opposed to updating the list twice after changes to UI)
+        void DisableUIElements()
+        {
+            ConnectToTwitch.IsEnabled = true;
+            RestartBotMenuItem.IsEnabled = false;
+            StopBotMenuItem.IsEnabled = false;
+
+            SpeechSynthPauseResume.IsEnabled = false;
+            SpeechSynthClearAllPrompts.IsEnabled = false;
+            twitchPlaysButton.IsEnabled = false;
+            CheckCurrentAccessToken.IsEnabled = false;
+            ShowRouletteSuccess.IsEnabled = false;
+            NinjaApiSilenceTTS.IsEnabled = false;
+
+            TestButton.IsEnabled = false;
         }
 
         void CloseEverything()

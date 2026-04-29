@@ -135,8 +135,15 @@ namespace TwitchBot
             }
         }
 
+        //Sends all messages from EventSub's "OnMessageReceived" to this method when "Twitch Plays" flag is enabled. Is used to more easily swap between which game's functionality is used.
+        public void TwitchPlaysSelector(TwitchLib.EventSub.Core.Models.Chat.ChatMessage e)
+        {
+            //enable to play Skyrim SE
+            TwitchPlaysSkyrim(e);
+        }
+
         //Twitch plays Skyrim SE
-        public void TwitchPlaysSkyrim(TwitchLib.EventSub.Core.Models.Chat.ChatMessage e)
+        void TwitchPlaysSkyrim(TwitchLib.EventSub.Core.Models.Chat.ChatMessage e)
         {
             //MainWindow.Log("TwitchPlays triggered and read: " + e.ChatMessage);
             //Trace.WriteLine("TwitchPlays triggered and read: " + e.ChatMessage);

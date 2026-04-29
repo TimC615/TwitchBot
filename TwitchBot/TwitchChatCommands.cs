@@ -35,7 +35,7 @@ namespace TwitchBot
 
         Dictionary<string, string> CommandsStaticResponses = new Dictionary<string, string>
         {
-            { "about", "Hello! I'm Cake and I'm a Canadian variety streamer. We play a bunch of stuff over here in this small corner of the internet. Come pop a seat and have fun watching the shenanigans!"},
+            { "cakebot", "Beep Boop! I'm CakeBot, a Twitch bot made by TheCakeIsAPie__. Interact with me either through chat commands or certain points redeems. If you have any ideas for new features or improvements, feel free to suggest them!"},
             { "discord", "Join the discord server at: https://discord.gg/uzHqnxKKkC"},
             { "twitter", "Follow me on Twitter at: https://twitter.com/TheCakeIsAPi"},
             { "lurk", "Have fun lurking!"}
@@ -49,6 +49,7 @@ namespace TwitchBot
             this.NinjaAPIConnection = NinjaAPIConnection;
         }
 
+        //Send all command messages (messages that begin with '!') to this method which will then determine what type of command it is and perform the relavent action for the command
         async public void BaseCommandMethod(TwitchLib.EventSub.Core.SubscriptionTypes.Channel.ChannelChatMessage e)
         {
             //contains an array of the user's whole message. when compared to _TwitchClient implementation, array[0] is the command itself and all following array indexes are arguments
@@ -69,7 +70,7 @@ namespace TwitchBot
                 //return list of current bot commands (added different command to avoid also showing commands for other Twitch bots)
                 if(cleanedCommandName.Equals("commands") || cleanedCommandName.Equals("botmenu"))
                 {
-                    string helpMessage = "The current chat commands are: help, about, discord, twitter, lurk, joke, fact, roll, roulette, rouletteleaderboard, and 1st";
+                    string helpMessage = "The current chat commands are: help, cakebot, discord, twitter, lurk, joke, fact, roll, roulette, rouletteleaderboard, and 1st";
                     TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, helpMessage, e.MessageId, true);
                 }
 
@@ -216,13 +217,19 @@ namespace TwitchBot
                     string? helpMessage = null;
                     switch (helpSpecifier)
                     {
-                        case "about":
+                        case "cakebot":
                         case "discord":
                         case "twitter":
                         case "lurk":
-                        case "fact":
-                        case "joke":
                             helpMessage = "Enter \"!" + helpSpecifier + "\" and I'll do all the rest";
+                            break;
+
+                        case "fact":
+                            helpMessage = "Enter \"!fact\" to get a random fun fact";
+                            break;
+
+                        case "joke":
+                            helpMessage = "Enter \"!joke\" to get a random joke";
                             break;
 
                         case "1st":
@@ -590,14 +597,17 @@ namespace TwitchBot
                     //API get request
                     string stringResponse = await response.Content.ReadAsStringAsync();
 
-                    WPFUtility.WriteToLog($"Fact test: {stringResponse}");
-
                     //convert API call to array of objects. we only ever call 1 result from API so length will always be 1
                     APINinjaFacts[] result = JsonConvert.DeserializeObject<APINinjaFacts[]>(stringResponse);
 
                     TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, result[0].fact, sendMessageAsChatBot: true);
-                    //TwitchPlays.SpeechSynthSync(result[0].fact);
-                    _SpeechSynth.SpeechSynth(result[0].fact);
+
+                    if (!Properties.Settings.Default.SilenceNinjaApiTTS)
+                        _SpeechSynth.SpeechSynth(result[0].fact);
+                }
+                else
+                {
+                    WPFUtility.WriteToLog($"Error (code {response.StatusCode}) receiving Ninja API fact: {response.ReasonPhrase}");
                 }
             }
             catch (Exception except)
@@ -624,8 +634,13 @@ namespace TwitchBot
                     APINinjaDadJokes[] result = JsonConvert.DeserializeObject<APINinjaDadJokes[]>(stringResponse);
 
                     TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, result[0].joke, sendMessageAsChatBot: true);
-                    //TwitchPlays.SpeechSynthSync(result[0].joke);
-                    _SpeechSynth.SpeechSynth(result[0].joke);
+
+                    if (!Properties.Settings.Default.SilenceNinjaApiTTS)
+                        _SpeechSynth.SpeechSynth(result[0].joke);
+                }
+                else
+                {
+                    WPFUtility.WriteToLog($"Error (code {response.StatusCode}) receiving Ninja API joke: {response.ReasonPhrase}");
                 }
             }
             catch (Exception except)

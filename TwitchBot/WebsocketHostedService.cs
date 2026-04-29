@@ -308,7 +308,7 @@ namespace TwitchBot
                 if (GlobalObjects.twitchPlaysActive)
                 {
                     //triggers Skyrim-specific commands
-                    GlobalObjects._TwitchPlays.TwitchPlaysSkyrim(chatMessageBody.Message);
+                    GlobalObjects._TwitchPlays.TwitchPlaysSelector(chatMessageBody.Message);
                 }       
             }
         }
