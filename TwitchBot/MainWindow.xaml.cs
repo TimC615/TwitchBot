@@ -346,7 +346,23 @@ namespace TwitchBot
 
         async private void TestButton_Click(object sender, RoutedEventArgs e)
         {
-            WPFUtility.WriteToLog($"TEST BUTTON: SilenceNinjaApiTTS flag = {Properties.Settings.Default.SilenceNinjaApiTTS}");
+            List<string> userIdList = new List<string>();
+            userIdList.Add("156055800");
+            userIdList.Add("1117028589");
+            userIdList.Add("1388894751");
+            userIdList.Add("37069375");
+
+            //, "", "", ""
+
+            GetUsersResponse testResp = await GlobalObjects._TwitchAPI.Helix.Users.GetUsersAsync(ids: userIdList);
+
+            if (testResp == null)
+                WPFUtility.WriteToLog("Test button: user list was null");
+
+            foreach(var user in testResp.Users)
+            {
+                WPFUtility.WriteToLog($"Test button: {user.Id}\t{user.Login}");
+            }
         }
 
         async private void TestModButton_Click(object sender, RoutedEventArgs e)

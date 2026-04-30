@@ -154,22 +154,15 @@ namespace TwitchBot.Utility_Code
 
         static public void FirstRedeem(ChannelPointsCustomRewardRedemption e)
         {
-            Dictionary<string, int> firstRedeemLeaderboard;
-            try
-            {
-                string firstRedeemJsonInput = File.ReadAllText(FIRSTREDEEMSJSONFILENAME);
+            //Dictionary<string, int> firstRedeemLeaderboard = TwitchChatCommands.GetFirstLeaderboardFromJson();
+            Dictionary<string, int>? firstRedeemLeaderboard = TwitchChatCommands.GetLeaderboardFromJson(FIRSTREDEEMSJSONFILENAME);
 
-                var deserializedLeaderboard = JsonConvert.DeserializeObject<Dictionary<string, int>>(firstRedeemJsonInput);
-                if (deserializedLeaderboard == null)
-                    firstRedeemLeaderboard =  new Dictionary<string, int>();
-                else
-                    firstRedeemLeaderboard =  deserializedLeaderboard;
-            }
-            catch (Exception except)
+            if (firstRedeemLeaderboard == null)
             {
-                WPFUtility.WriteToLog($"Read from first redeem leaderboard JSON error: {except.Message}");
+                WPFUtility.WriteToLog($"First Redeem: Leaderboard set to null. Ending method to avoid saving incorrect data over actual file.");
                 return;
             }
+
             //update leaderboard 
             if (firstRedeemLeaderboard.ContainsKey(e.UserId))
                 firstRedeemLeaderboard[e.UserId]++;

@@ -17,6 +17,18 @@ using TwitchLib.Api.Helix.Models.Users.GetUsers;
 
 namespace TwitchBot
 {
+    public class FirstLeaderboardPosition
+    {
+        public string userId;
+        public string username;
+        public int totalFirsts;
+
+        public FirstLeaderboardPosition(string userId, int totalFirsts)
+        {
+            this.userId = userId;
+            this.totalFirsts = totalFirsts;
+        }
+    }
     public class TwitchChatCommands
     {
         TwitchAPI _TwitchAPI;
@@ -28,10 +40,12 @@ namespace TwitchBot
         private static readonly int TIMEOUTROULETTETOPPOSITIONSTODISPLAY = 3;   //used to determine max number of results to show for leaderboard display
         private static readonly int MAXTIMEOUTTIMEALLOWED = 1209600;    //maximum time allowed to time someone out through the Twitch API
 
+        private static readonly int FIRSTLEADERBOARDTOPPOSITIONSTODISPLAY = 3; //used to determine how many users to show when displaying 
+
         private static readonly string FIRSTREDEEMSJSONFILENAME = @"firstredeemsleaderboard.json";
         private readonly string ROULETTEJSONFILENAME = @"rouletteleaderboard.json";
 
-        private Dictionary<string, int> rouletteLeaderboard;
+        private Dictionary<string, int>? rouletteLeaderboard;
 
         Dictionary<string, string> CommandsStaticResponses = new Dictionary<string, string>
         {
@@ -70,7 +84,7 @@ namespace TwitchBot
                 //return list of current bot commands (added different command to avoid also showing commands for other Twitch bots)
                 if(cleanedCommandName.Equals("commands") || cleanedCommandName.Equals("botmenu"))
                 {
-                    string helpMessage = "The current chat commands are: help, cakebot, discord, twitter, lurk, joke, fact, roll, roulette, rouletteleaderboard, and 1st";
+                    string helpMessage = "The current chat commands are: help, cakebot, discord, twitter, lurk, joke, fact, roll, roulette, rouletteleaderboard, 1st, and 1stleaderboard";
                     TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, helpMessage, e.MessageId, true);
                 }
 
@@ -157,6 +171,11 @@ namespace TwitchBot
                 if (cleanedCommandName.Equals("rouletteleaderboard"))
                 {
                     RouletteLeaderboardCommand(e.MessageId);
+                }
+
+                if(cleanedCommandName.Equals("firstleaderboard") || cleanedCommandName.Equals("1stleaderboard"))
+                {
+                    FirstLeaderboardCommand(e.MessageId);
                 }
 
                 if (cleanedCommandName.Equals("first") || cleanedCommandName.Equals("1st"))
@@ -302,7 +321,13 @@ namespace TwitchBot
                     }
                 }
 
-                rouletteLeaderboard = GetRouletteLeaderboardFromJson();
+                //rouletteLeaderboard = GetRouletteLeaderboardFromJson();
+                rouletteLeaderboard = GetLeaderboardFromJson(ROULETTEJSONFILENAME);
+
+                if(rouletteLeaderboard == null)
+                {
+                    throw new Exception("Roulette leaderboard has been initialized to null");
+                }
 
                 //only reaches here if user succeeds all roulette spins
                 //check if user is in leaderboard already
@@ -334,7 +359,18 @@ namespace TwitchBot
 
         async void RouletteTimeout(string senderUsername, string senderUserId, string senderDisplayName, string parentMessageId, int timeoutLength, bool isModerator)
         {
-            rouletteLeaderboard = GetRouletteLeaderboardFromJson();
+            try
+            {
+                //rouletteLeaderboard = GetRouletteLeaderboardFromJson();
+                rouletteLeaderboard = GetLeaderboardFromJson(ROULETTEJSONFILENAME);
+
+                if (rouletteLeaderboard == null)
+                    throw new Exception("Roulette leaderboard has been intiailzied to null");
+            }
+            catch (Exception except) {
+                WPFUtility.WriteToLog($"Roulette Timeout Error: {except.Message}");
+                return;
+            }
 
             await TwitchUtility.CheckAccessToken();
 
@@ -379,10 +415,80 @@ namespace TwitchBot
             }
         }
 
+        async void FirstLeaderboardCommand(string parentMessageId)
+        {
+            //Dictionary<string, int> firstRedeemLeaderboard = GetFirstLeaderboardFromJson();
+            Dictionary<string, int>? firstRedeemLeaderboard = GetLeaderboardFromJson(FIRSTREDEEMSJSONFILENAME);
+
+            if (firstRedeemLeaderboard == null)
+            {
+                WPFUtility.WriteToLog($"FirstLeaderboard Error: leaderboard dictionary initialized to null");
+                return;
+            }
+
+            List<FirstLeaderboardPosition> topLeaderboardSpots = GetTopFirstLeaderboardPositions(firstRedeemLeaderboard);
+
+            if (topLeaderboardSpots.Count == 0)
+            {
+                string emptyLeaderboardMessage = "There are currently no people listed to have redeemed the 1st command. Be the first one to redeem it in a stream to have your score listed here!";
+                TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, emptyLeaderboardMessage, parentMessageId, true);
+            }
+            else
+            {
+                List<string> userIdsToConvertToUsernames = new List<string>();
+                foreach (var user in topLeaderboardSpots)
+                    userIdsToConvertToUsernames.Add(user.userId);
+
+                try
+                {
+                    GetUsersResponse usersResp = await GlobalObjects._TwitchAPI.Helix.Users.GetUsersAsync(ids: userIdsToConvertToUsernames);
+
+                    if (usersResp.Users.Length != userIdsToConvertToUsernames.Count)
+                        throw new Exception("Input list of user Ids and Twitch's list of resulting usernames are not equal.");
+
+                    if(usersResp.Users.Length != topLeaderboardSpots.Count)
+                        throw new Exception("List of top leaderboard positions and Twitch's list of resulting usernames are not equal.");
+
+                    for (int x = 0; x < topLeaderboardSpots.Count; x++)
+                    {
+                        topLeaderboardSpots[x].username = usersResp.Users[x].DisplayName;
+                    }
+                }
+                catch(Exception except)
+                {
+                    WPFUtility.WriteToLog($"Error pulling usernames for first leaderboard: {except.Message}");
+                    return;
+                }
+
+                string leaderboardOutput = $"The people with the most 1st redeems are: ";
+                foreach (var currSpot in topLeaderboardSpots)
+                {
+                    if (currSpot.totalFirsts == 1)
+                        leaderboardOutput += $" {currSpot.username} with {currSpot.totalFirsts} redemption,";
+                    else
+                        leaderboardOutput += $" {currSpot.username} with {currSpot.totalFirsts} redemptions,";
+                }
+
+                leaderboardOutput = leaderboardOutput.Remove(leaderboardOutput.LastIndexOf(","), 1);
+
+                TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, leaderboardOutput, parentMessageId, true);
+            }
+        }
+
         void RouletteLeaderboardCommand(string parentMessageId)
         {
-            //var topGroups = MainWindow.rouletteLeaderboard.OrderByDescending(x => x.Value).GroupBy(x => x.Value).Take(3);
-            rouletteLeaderboard = GetRouletteLeaderboardFromJson(); 
+            try
+            {
+                //rouletteLeaderboard = GetRouletteLeaderboardFromJson();
+                rouletteLeaderboard = GetLeaderboardFromJson(ROULETTEJSONFILENAME);
+
+                if (rouletteLeaderboard == null)
+                    throw new Exception("Roulette leaderboard has been initialized to null");
+            }
+            catch(Exception except)
+            {
+                WPFUtility.WriteToLog($"RouletteLeaderboardCommand Error: {except.Message}");
+            }
 
             List<RouletteLeaderboardPosition> topLeaderboardSpots = GetTopRouletteLeaderboardPositions(rouletteLeaderboard);
 
@@ -406,6 +512,29 @@ namespace TwitchBot
 
                 TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, leaderboardOutput, parentMessageId, true);
             }
+        }
+
+        public List<FirstLeaderboardPosition> GetTopFirstLeaderboardPositions(Dictionary<string, int> leaderboard)
+        {
+            List<FirstLeaderboardPosition> topPositions = new List<FirstLeaderboardPosition>();
+
+            var topGroups = leaderboard.OrderByDescending(x => x.Value).GroupBy(x => x.Value).Take(FIRSTLEADERBOARDTOPPOSITIONSTODISPLAY);
+
+            foreach (var topGroup in topGroups)
+            {
+                foreach (var topPair in topGroup)
+                {
+                    if (topPositions.Count != FIRSTLEADERBOARDTOPPOSITIONSTODISPLAY && topPair.Value != 0)
+                    {
+                        FirstLeaderboardPosition currPosition = new FirstLeaderboardPosition(topPair.Key, topPair.Value);
+                        topPositions.Add(currPosition);
+                    }
+                    else
+                        return topPositions;
+                }
+            }
+
+            return topPositions;
         }
 
         public List<RouletteLeaderboardPosition> GetTopRouletteLeaderboardPositions(Dictionary<string, int> leaderboard)
@@ -516,22 +645,8 @@ namespace TwitchBot
 
         void FirstCommand(string userId, string userDisplayName, string parentMessageId)
         {
-            Dictionary<string, int> firstRedeemLeaderboard = null;
-            try
-            {
-                string firstRedeemJsonInput = File.ReadAllText(FIRSTREDEEMSJSONFILENAME);
-
-                var deserializedLeaderboard = JsonConvert.DeserializeObject<Dictionary<string, int>>(firstRedeemJsonInput);
-                if (deserializedLeaderboard == null)
-                    WPFUtility.WriteToLog($"FirstRedeem leaderboard was empty when trying to read user scores");
-                else
-                    firstRedeemLeaderboard = deserializedLeaderboard;
-            }
-            catch (Exception except)
-            {
-                WPFUtility.WriteToLog($"Read from first redeem leaderboard JSON error: {except.Message}");
-                return;
-            }
+            //Dictionary<string, int>? firstRedeemLeaderboard = GetFirstLeaderboardFromJson();
+            Dictionary<string, int>? firstRedeemLeaderboard = GetLeaderboardFromJson(FIRSTREDEEMSJSONFILENAME);
 
             if (firstRedeemLeaderboard != null)
             {
@@ -546,6 +661,9 @@ namespace TwitchBot
             }
         }
 
+
+
+        /*
         public Dictionary<string, int> GetRouletteLeaderboardFromJson()
         {
             try
@@ -562,6 +680,55 @@ namespace TwitchBot
             {
                 WPFUtility.WriteToLog($"Read from roulette leaderboard JSON error: {except.Message}");
                 return new Dictionary<string, int>();
+            }
+        }
+        */
+
+
+        /*
+        public static Dictionary<string, int>? GetFirstLeaderboardFromJson()
+        {
+            try
+            {
+                string firstRedeemJsonInput = File.ReadAllText(FIRSTREDEEMSJSONFILENAME);
+
+                var deserializedLeaderboard = JsonConvert.DeserializeObject<Dictionary<string, int>>(firstRedeemJsonInput);
+                if (deserializedLeaderboard == null)
+                {
+                    WPFUtility.WriteToLog($"FirstRedeem leaderboard was empty when trying to read user scores");
+                    return new Dictionary<string, int>();
+                }
+                else
+                    return deserializedLeaderboard;
+            }
+            catch (Exception except)
+            {
+                WPFUtility.WriteToLog($"Read from first redeem leaderboard JSON error: {except.Message}");
+                return null;
+            }
+        }
+        */
+
+
+        //currently used as a way to turn the formerly independant methods used to read the "roulette" and "first" leaderboards into a more elegant 
+        public static Dictionary<string, int>? GetLeaderboardFromJson(string leaderboardFileName)
+        {
+            try
+            {
+                string firstRedeemJsonInput = File.ReadAllText(leaderboardFileName);
+
+                var deserializedLeaderboard = JsonConvert.DeserializeObject<Dictionary<string, int>>(firstRedeemJsonInput);
+                if (deserializedLeaderboard == null)
+                {
+                    throw new Exception($"leaderboard was null when trying to deserialize user scores from file name \"{leaderboardFileName}\"");
+                }
+                else
+                    return deserializedLeaderboard;
+            }
+            catch (Exception except)
+            {
+                WPFUtility.WriteToLog($"Read from leaderboard JSON error: {except.Message}");
+                return null;
             }
         }
 
