@@ -449,9 +449,21 @@ namespace TwitchBot
                     if(usersResp.Users.Length != topLeaderboardSpots.Count)
                         throw new Exception("List of top leaderboard positions and Twitch's list of resulting usernames are not equal.");
 
+                    //following user id check is required since a bug appears with Twitch's above response where the input and output order are different,
+                    //making the final output string display a mismatch between users and total 1sts
+
+                    //iterate through each leaderboard spot
                     for (int x = 0; x < topLeaderboardSpots.Count; x++)
                     {
-                        topLeaderboardSpots[x].username = usersResp.Users[x].DisplayName;
+                        //iterate through twitch's user response list, checking and confirming ids match before adding display names to leaderboard spots
+                        for (int y = 0; y < usersResp.Users.Length; y++)
+                        {
+                            if (usersResp.Users[y].Id == topLeaderboardSpots[x].userId)
+                            {
+                                topLeaderboardSpots[x].username = usersResp.Users[y].DisplayName;
+                                break;
+                            }
+                        }
                     }
                 }
                 catch(Exception except)
@@ -470,6 +482,8 @@ namespace TwitchBot
                 }
 
                 leaderboardOutput = leaderboardOutput.Remove(leaderboardOutput.LastIndexOf(","), 1);
+
+                WPFUtility.WriteToLog($"TEST: {leaderboardOutput}");
 
                 TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, leaderboardOutput, parentMessageId, true);
             }

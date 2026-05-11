@@ -82,10 +82,6 @@ using TwitchLib.Api.Helix.Models.EventSub;
 //add more "Twitch Plays" interactivity but, with low viewer counts, steer it more towards a "Twitch Interferes" as opposed to a full on twitch plays
 //look into having ui control of which game is triggered by "Twitch Plays" as opposed to having to manually control it through code (only needed if twitch plays is more commonly used/more game funtionality implemented)
 
-//add ability to turn off fact/joke commands. (stops ability to spam it relentlessly)
-//maybe just turn off tts functionaity
-
-//1st leaderboard? show probably just the top 3 people. (may be able to reuse roulette leaderboard code or even turn it into a method both leaderboards call)
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
 {
