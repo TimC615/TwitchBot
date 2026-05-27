@@ -8,9 +8,11 @@ using System.Text;
 using System.Threading.Tasks;
 using TwitchLib.Api;
 using TwitchLib.Api.Auth;
+using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomRewardRedemptionStatus;
 using TwitchLib.Api.Helix.Models.Channels.SendChatMessage;
 using TwitchLib.Api.Helix.Models.Moderation.GetModerators;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
+using TwitchLib.EventSub.Core.Models;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 using TwitchLib.EventSub.Websockets.Core.EventArgs;
 using TwitchLib.PubSub.Events;
@@ -248,6 +250,35 @@ namespace TwitchBot.Utility_Code
                     WPFUtility.WriteToLog($"TwitchUtility.SendChatMessage MESSAGE NOT SENT \ttDropCode:{respInfo.DropReason.Code}\tDropMessage{respInfo.DropReason.Message}");
                 }
             }
+        }
+
+        static async public void MovePngMe(EventSubNotificationPayload<ChannelPointsCustomRewardRedemption> eventPayload)
+        {
+            int successCode = OBSUtility.MovePNGTuber();
+
+            UpdateCustomRewardRedemptionStatusRequest rewardRedemptionStatus = new UpdateCustomRewardRedemptionStatusRequest();
+
+            //use this for automatically redeeming someone's points if action doesn't complete successfully
+
+            //if failure
+            if (successCode == -1)
+                rewardRedemptionStatus.Status = TwitchLib.Api.Core.Enums.CustomRewardRedemptionStatus.CANCELED;
+
+            //if success
+            else
+                rewardRedemptionStatus.Status = TwitchLib.Api.Core.Enums.CustomRewardRedemptionStatus.FULFILLED;
+
+
+            //await GlobalObjects._TwitchAPI.Helix.ChannelPoints.UpdateRedemptionStatusAsync(
+            //    eventPayload.Event.BroadcasterUserId, 
+            //    eventPayload.Event.Reward.Id, 
+            //    new List<string> { eventPayload.Subscription.Id }, 
+            //    rewardRedemptionStatus);
+        }
+
+        static async public void ResetPngMe(EventSubNotificationPayload<ChannelPointsCustomRewardRedemption> eventPayload)
+        {
+            OBSUtility.ResetPNGTuber();
         }
     }
 }

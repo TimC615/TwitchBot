@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using TwitchBot.Utility_Code;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomReward;
+using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomRewardRedemptionStatus;
 using TwitchLib.Api.Helix.Models.Channels.GetChannelInformation;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
@@ -138,6 +139,14 @@ namespace TwitchBot
 
                 case "1st":
                     TwitchUtility.FirstRedeem(pointsRedemption);
+                    break;
+
+                case "move png-me":
+                    TwitchUtility.MovePngMe(e.Payload);
+                    break;
+
+                case "reset png-me":
+                    TwitchUtility.ResetPngMe(e.Payload);
                     break;
             }
         }

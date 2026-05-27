@@ -82,6 +82,17 @@ using TwitchLib.Api.Helix.Models.EventSub;
 //add more "Twitch Plays" interactivity but, with low viewer counts, steer it more towards a "Twitch Interferes" as opposed to a full on twitch plays
 //look into having ui control of which game is triggered by "Twitch Plays" as opposed to having to manually control it through code (only needed if twitch plays is more commonly used/more game funtionality implemented)
 
+
+
+//add points redeem to move png around the border of the screen (with a random rotation probably forcing head to be visible?)
+//unsure if depth into edge of border should vary
+//points redeem (or WPF button) to reset to bottom right hand corner?
+//randomize angle (maybe 90 max?) in relation to which border is randomly chosen (left, right, top, or bottom)
+//get some preset locations to move png out of various game elements
+
+
+//add automatic clearing or refunding of points redeems (works as intended = clear  error = refund)
+
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
 {
@@ -342,23 +353,32 @@ namespace TwitchBot
 
         async private void TestButton_Click(object sender, RoutedEventArgs e)
         {
-            List<string> userIdList = new List<string>();
-            userIdList.Add("156055800");
-            userIdList.Add("1117028589");
-            userIdList.Add("1388894751");
-            userIdList.Add("37069375");
+            //List<string> userIdList = new List<string>();
+            //userIdList.Add("156055800");
+            //userIdList.Add("1117028589");
+            //userIdList.Add("1388894751");
+            //userIdList.Add("37069375");
 
-            //, "", "", ""
+            ////, "", "", ""
 
-            GetUsersResponse testResp = await GlobalObjects._TwitchAPI.Helix.Users.GetUsersAsync(ids: userIdList);
+            //GetUsersResponse testResp = await GlobalObjects._TwitchAPI.Helix.Users.GetUsersAsync(ids: userIdList);
 
-            if (testResp == null)
-                WPFUtility.WriteToLog("Test button: user list was null");
+            //if (testResp == null)
+            //    WPFUtility.WriteToLog("Test button: user list was null");
 
-            foreach(var user in testResp.Users)
-            {
-                WPFUtility.WriteToLog($"Test button: {user.Id}\t{user.Login}");
-            }
+            //foreach(var user in testResp.Users)
+            //{
+            //    WPFUtility.WriteToLog($"Test button: {user.Id}\t{user.Login}");
+            //}
+
+            //int resetResult = OBSUtility.ResetPNGTuber();
+            int moveResult = OBSUtility.MovePNGTuber();
+
+            //Random random = new Random();
+            //int border = random.Next(0, 4);
+            //double rawRotationAngle = Math.Round(random.NextDouble() * (45.00 - -45.00) + -45.00, 2);
+
+            //WPFUtility.WriteToLog($"Test: {rawRotationAngle}");
         }
 
         async private void TestModButton_Click(object sender, RoutedEventArgs e)

@@ -23,6 +23,7 @@ namespace TwitchBot
 
         public static OBSWebsocket _OBS = null;
         public static readonly string ObsTtsTalkingHeadName = "TTS Talking Head";
+        public static readonly string ObsPngTuberName = "Reactive Images - Myself";
 
         public static bool botIsActive = false;
         public static bool twitchPlaysActive = false;
