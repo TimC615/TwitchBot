@@ -6,9 +6,14 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Media.Animation;
 using TwitchLib.Api;
 using TwitchLib.Api.Auth;
+using TwitchLib.Api.Helix.Models.ChannelPoints;
+using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
+using TwitchLib.Api.Helix.Models.ChannelPoints.GetCustomReward;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomRewardRedemptionStatus;
+using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateRedemptionStatus;
 using TwitchLib.Api.Helix.Models.Channels.SendChatMessage;
 using TwitchLib.Api.Helix.Models.Moderation.GetModerators;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
@@ -21,9 +26,6 @@ namespace TwitchBot.Utility_Code
 {
     class TwitchUtility
     {
-        private static readonly string FIRSTREDEEMSJSONFILENAME = @"firstredeemsleaderboard.json";
-
-
         public async static Task CheckAccessToken()
         {
             //Log("Checking AccessToken...");
@@ -58,75 +60,23 @@ namespace TwitchBot.Utility_Code
             }
         }
 
-        async static public void TtsRedeem(ChannelPointsCustomRewardRedemption e, int speechRate)
+        //Used as a centralized handler of points redemption status updating.
+        //Returns true if everything worked as expected and returns false if an error was encountered.
+        //Can only be used on rewards that were created through this bot specifically.
+        public async static void UpdateCustomPointRedemptionStatus(string broadcasterId, string rewardId, List<string> redemptionIds, UpdateCustomRewardRedemptionStatusRequest updateStatusRequest)
         {
-            SpeechSynthesis _SpeechSynth = SpeechSynthesis.GetInstance();
-
-            if (GlobalObjects._OBS.IsConnected)
+            try
             {
-                string ttsSceneName = GlobalObjects._OBS.GetCurrentProgramScene();
-
-                List<SceneItemDetails> sceneItemList = GlobalObjects._OBS.GetSceneItemList(ttsSceneName);
-
-                SceneItemDetails ttsSceneItem = sceneItemList.FirstOrDefault(sceneItem => sceneItem.SourceName == GlobalObjects.ObsTtsTalkingHeadName);
-
-                if (ttsSceneName != null && ttsSceneItem != null)
-                {
-                    try
-                    {
-                        await CheckAccessToken();
-
-                        //Log("TTS Talking Head Source Found");
-
-                        //get id and login of user, send request to Twitch API to get profile image url, and set obs browser source to url
-                        List<string> idSearch = new List<string>();
-                        //idSearch.Add(e.RewardRedeemed.Redemption.User.Id);
-                        idSearch.Add(e.UserId);
-                        List<string> userSearch = new List<string>();
-                        //userSearch.Add(e.RewardRedeemed.Redemption.User.Login);
-                        userSearch.Add(e.UserLogin);
-
-                        var users = GlobalObjects._TwitchAPI.Helix.Users.GetUsersAsync(idSearch, userSearch);
-                        string profileImageUrl = users.Result.Users[0].ProfileImageUrl;
-
-                        InputSettings testInSet = GlobalObjects._OBS.GetInputSettings("TTS Talking Head");
-
-                        testInSet.Settings["url"] = profileImageUrl;
-
-                        GlobalObjects._OBS.SetInputSettings(testInSet);
-
-                        GlobalObjects._OBS.SetSceneItemEnabled(ttsSceneName, ttsSceneItem.ItemId, true);
-
-
-                        //_SpeechSynth.SpeechSynthAsync(e.RewardRedeemed.Redemption.UserInput, speechRate);
-                        _SpeechSynth.SpeechSynthAsync(e.UserInput, speechRate);
-
-                        OBSUtility.CloseTTSFace(ttsSceneItem, ttsSceneName);
-                    }
-                    catch (Exception except)
-                    {
-                        WPFUtility.WriteToLog($"TtsRedeem Error: {except.Message}");
-
-                        _SpeechSynth.SpeechSynthAsync(e.UserInput, speechRate);
-                    }
-                }
-                else
-                {
-                    WPFUtility.WriteToLog("TTS Talking Head Source not found in current OBS scene");
-
-                    _SpeechSynth.SpeechSynthAsync(e.UserInput, speechRate);
-                }
+                UpdateRedemptionStatusResponse test =  await GlobalObjects._TwitchAPI.Helix.ChannelPoints.UpdateRedemptionStatusAsync(
+                    broadcasterId, 
+                    rewardId, 
+                    redemptionIds, 
+                    updateStatusRequest);
             }
-            else
+            catch(Exception except)
             {
-                //trigger TTS without calling obs-related methods
-                if (speechRate == -100)
-                    _SpeechSynth.SpeechSynthAsync(e.UserInput);
-                else
-                    _SpeechSynth.SpeechSynthAsync(e.UserInput, speechRate);
+                WPFUtility.WriteToLog($"Error updating custom points redemtion status: {except.Message}");
             }
-
-
         }
 
         async static public void OnCommercial_NewThread(ChannelAdBreakBeginArgs e)
@@ -152,45 +102,6 @@ namespace TwitchBot.Utility_Code
             Thread.Sleep(threadSleepLength);
             WPFUtility.WriteToLog("EventSub OnCommercial: Ads have finished");
             //GlobalObjects._TwitchClient.SendMessage(GlobalObjects.TwitchChannelName, "Ad break is now done!");
-        }
-
-        static public void FirstRedeem(ChannelPointsCustomRewardRedemption e)
-        {
-            //Dictionary<string, int> firstRedeemLeaderboard = TwitchChatCommands.GetFirstLeaderboardFromJson();
-            Dictionary<string, int>? firstRedeemLeaderboard = TwitchChatCommands.GetLeaderboardFromJson(FIRSTREDEEMSJSONFILENAME);
-
-            if (firstRedeemLeaderboard == null)
-            {
-                WPFUtility.WriteToLog($"First Redeem: Leaderboard set to null. Ending method to avoid saving incorrect data over actual file.");
-                return;
-            }
-
-            //update leaderboard 
-            if (firstRedeemLeaderboard.ContainsKey(e.UserId))
-                firstRedeemLeaderboard[e.UserId]++;
-            else
-                firstRedeemLeaderboard.Add(e.UserId, 1);
-
-
-            //check in case no update occurs
-            if (firstRedeemLeaderboard == null)
-            {
-                WPFUtility.WriteToLog($"firstRedeemLeaderboard was null when trying to save to file");
-                return;
-            }
-
-            //save to .json file
-            try
-            {
-                var firstRedeemJson = JsonConvert.SerializeObject(firstRedeemLeaderboard);
-
-                System.IO.File.WriteAllText(FIRSTREDEEMSJSONFILENAME, firstRedeemJson);
-            }
-            catch(Exception except)
-            {
-                WPFUtility.WriteToLog($"rouletteLeaderboard error while saving to file - {except.Message}");
-                return;
-            }
         }
 
         static async public void ReinstateModRole(TwitchAPI _TwitchAPI, string TwitchChannelId, string userIdToMod, string username, int banLength)
@@ -252,33 +163,59 @@ namespace TwitchBot.Utility_Code
             }
         }
 
-        static async public void MovePngMe(EventSubNotificationPayload<ChannelPointsCustomRewardRedemption> eventPayload)
+        //Used as a troubleshooting step if there is an issue with autohandling redemption status of points rewards (specifically only ones made through this bot)
+        static async public void RecreateCustomPointsReward(CreateCustomRewardsRequest createReward)
         {
-            int successCode = OBSUtility.MovePNGTuber();
+            GetCustomRewardsResponse customRewards = new GetCustomRewardsResponse();
 
-            UpdateCustomRewardRedemptionStatusRequest rewardRedemptionStatus = new UpdateCustomRewardRedemptionStatusRequest();
+            //get list of rewards that were specifically created through this bot (as the next step can only work if this is true)
+            try
+            {
+                customRewards = await GlobalObjects._TwitchAPI.Helix.ChannelPoints.GetCustomRewardAsync(
+                GlobalObjects.TwitchBroadcasterUserId,
+                onlyManageableRewards: true);
+            }
+            catch (Exception except)
+            {
+                WPFUtility.WriteToLog($"Error retreiving list of custom rewards: {except.Message}");
+            }
 
-            //use this for automatically redeeming someone's points if action doesn't complete successfully
+            //iterate through list of rewards and if a reward already exists with the title of the new reward, the older reward is removed from Twitch
+            foreach (CustomReward reward in customRewards.Data)
+            {
+                //used to ensure whatever reward previously had this name is removed
+                if (reward.Title == createReward.Title)
+                {
+                    try
+                    {
+                        await GlobalObjects._TwitchAPI.Helix.ChannelPoints.DeleteCustomRewardAsync(GlobalObjects.TwitchBroadcasterUserId, reward.Id);
+                    }
+                    catch (Exception except)
+                    {
+                        WPFUtility.WriteToLog($"Error removing custom reward: {except.Message}");
+                    }
+                    break;
+                }
+            }
 
-            //if failure
-            if (successCode == -1)
-                rewardRedemptionStatus.Status = TwitchLib.Api.Core.Enums.CustomRewardRedemptionStatus.CANCELED;
+            bool rewardCreated = true;
 
-            //if success
-            else
-                rewardRedemptionStatus.Status = TwitchLib.Api.Core.Enums.CustomRewardRedemptionStatus.FULFILLED;
+            //create new reward with the information in the object from the method parameter
+            try
+            {
+                CreateCustomRewardsResponse customRewardResponse = await GlobalObjects._TwitchAPI.Helix.ChannelPoints.CreateCustomRewardsAsync(
+                GlobalObjects.TwitchBroadcasterUserId,
+                createReward
+                );
+            }
+            catch(Exception except)
+            {
+                rewardCreated = false;
+                WPFUtility.WriteToLog($"Error creating custom reward \"{createReward.Title}\": {except.Message}");
+            }
 
-
-            //await GlobalObjects._TwitchAPI.Helix.ChannelPoints.UpdateRedemptionStatusAsync(
-            //    eventPayload.Event.BroadcasterUserId, 
-            //    eventPayload.Event.Reward.Id, 
-            //    new List<string> { eventPayload.Subscription.Id }, 
-            //    rewardRedemptionStatus);
-        }
-
-        static async public void ResetPngMe(EventSubNotificationPayload<ChannelPointsCustomRewardRedemption> eventPayload)
-        {
-            OBSUtility.ResetPNGTuber();
+            if(rewardCreated)
+                WPFUtility.WriteToLog($"Successfully created new points reward \"{createReward.Title}\". Currently can't autoset images to rewards made this way so this has to be done manually on Twitch.");
         }
     }
 }

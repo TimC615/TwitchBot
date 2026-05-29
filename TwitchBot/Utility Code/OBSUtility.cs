@@ -35,8 +35,9 @@ namespace TwitchBot.Utility_Code
             }
         }
 
-        
-        public static int ResetPNGTuber()
+        //Resets the pngtuber image in OBS back to the bottom right hand side corner
+        //Returns true if succeeded and false if an error occurred
+        public static bool ResetPNGTuber()
         {
             string currSceneName = GlobalObjects._OBS.GetCurrentProgramScene();
             try
@@ -95,16 +96,18 @@ namespace TwitchBot.Utility_Code
 
                 GlobalObjects._OBS.SetSceneItemTransform(currSceneName, pngtuberSceneItem.ItemId, transformInfo);
 
-                return 1;
+                return true;
             }
             catch (Exception except)
             {
                 WPFUtility.WriteToLog($"ResetPngTuber Error: {except.Message}");
-                return -1;
+                return false;
             }
         }
 
-        public static int MovePNGTuber()
+        //Method to move pngtuber image in OBS to a random location and rotation along the edge of screen
+        //Returns true if everything succeeded and false if an error occurred
+        public static bool MovePNGTuber()
         {
             string currSceneName = GlobalObjects._OBS.GetCurrentProgramScene();
             try
@@ -227,12 +230,12 @@ namespace TwitchBot.Utility_Code
                 //send final commands to obs
                 GlobalObjects._OBS.SetSceneItemTransform(currSceneName, pngtuberSceneItem.ItemId, transformInfo);
 
-                return 1;
+                return true;
             }
             catch (Exception except)
             {
                 WPFUtility.WriteToLog($"ResetPngTuber Error: {except.Message}");
-                return -1;
+                return false;
             }
         }
         

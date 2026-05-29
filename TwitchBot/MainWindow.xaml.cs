@@ -11,14 +11,22 @@ using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Reflection;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Windows;
 using System.Windows.Threading;
 using TwitchBot.Utility_Code;
 using TwitchLib.Api;
 using TwitchLib.Api.Auth;
 using TwitchLib.Api.Core.Enums;
+using TwitchLib.Api.Helix.Models.ChannelPoints;
+using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
+using TwitchLib.Api.Helix.Models.ChannelPoints.GetCustomReward;
 using TwitchLib.Api.Helix.Models.Channels.SendChatMessage;
+using TwitchLib.Api.Helix.Models.EventSub;
 using TwitchLib.Api.Helix.Models.Moderation.BanUser;
 using TwitchLib.Api.Helix.Models.Moderation.GetBannedUsers;
 using TwitchLib.Api.Helix.Models.Moderation.GetModerators;
@@ -27,12 +35,8 @@ using TwitchLib.Api.Helix.Models.Users.GetUsers;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
+using TwitchLib.PubSub.Models.Responses.Messages.Redemption;
 using static System.Formats.Asn1.AsnWriter;
-using System.Net.Http.Json;
-using System.Text.Json;
-using System.Text;
-using System.Text.Json.Serialization;
-using TwitchLib.Api.Helix.Models.EventSub;
 
 //Base functionality taken from HonestDanGames' Youtube channel https://youtu.be/Ufgq6_QhVKw?si=QYBbDl0sYVCy3QVF
 //Provides networking functionality to connect program to Twitch, beginner understanding of setting up API event handlers,
@@ -84,14 +88,11 @@ using TwitchLib.Api.Helix.Models.EventSub;
 
 
 
-//add points redeem to move png around the border of the screen (with a random rotation probably forcing head to be visible?)
-//unsure if depth into edge of border should vary
-//points redeem (or WPF button) to reset to bottom right hand corner?
-//randomize angle (maybe 90 max?) in relation to which border is randomly chosen (left, right, top, or bottom)
-//get some preset locations to move png out of various game elements
-
+//look into maybe having preset locations users can send pngtuber to (in the case of specific games)
 
 //add automatic clearing or refunding of points redeems (works as intended = clear  error = refund)
+
+//potentially make it so points redeems like "move png-me" and "reset png-me" are only enabled when specific obs scenes are active (would require subscribing to onSceneChanged and maybe onBroadcastStart)
 
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
@@ -142,13 +143,6 @@ namespace TwitchBot
         //Look for EventSub events in "WebsocketHostedServices.cs". Handles things like points redeems and ad break triggers.
 
         private TwitchChatCommands _TwitchChatCommands;
-
-
-        private static readonly int TIMEOUTROULETTELENGTH = 30;      //timeout length, in seconds
-        private static readonly int TIMEOUTROULETTETOPPOSITIONSTODISPLAY = 3;   //used to determine max number of results to show for leaderboard display
-
-        private readonly string ROULETTEJSONFILENAME = @"rouletteleaderboard.json";
-        private static readonly string FIRSTREDEEMSJSONFILENAME = @"firstredeemsleaderboard.json";
 
         //API Ninja
         private static HttpClient NinjaAPIConnection { get; set; }  //initialized in TwitchChatCommands (doing this so that connection can be manually closed when MainWindow closes)
@@ -351,34 +345,94 @@ namespace TwitchBot
             Properties.Settings.Default.Save();
         }
 
+        private void RecreateTTSNormalRateRewardMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            WPFUtility.WriteToLog($"Recreating TTS (Normal Speech Rate) points redeem...");
+
+            CreateCustomRewardsRequest createReward = new CreateCustomRewardsRequest();
+            createReward.Title = "TTS (Normal Speech Rate)";
+            createReward.Cost = 10;
+            createReward.BackgroundColor = "#E69900";
+            createReward.Prompt = "Give the TTS something to say at a normal speed!";
+            createReward.IsEnabled = true;
+            createReward.IsUserInputRequired = true;
+
+            TwitchUtility.RecreateCustomPointsReward(createReward);
+        }
+
+        private void RecreateTTSRandomRateRewardMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            WPFUtility.WriteToLog($"Recreating TTS (Random Speech Rate) points redeem...");
+
+            CreateCustomRewardsRequest createReward = new CreateCustomRewardsRequest();
+            createReward.Title = "TTS (Random Speech Rate)";
+            createReward.Cost = 10;
+            createReward.BackgroundColor = "#EB0400";
+            createReward.Prompt = "Give the TTS something to say at a random speed!";
+            createReward.IsEnabled = true;
+            createReward.IsUserInputRequired = true;
+            
+            TwitchUtility.RecreateCustomPointsReward(createReward);
+        }
+
+
+
+
+        private void RecreateMovePNGMeRewardMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            WPFUtility.WriteToLog($"Recreating Move PNG-Me points redeem...");
+
+            CreateCustomRewardsRequest createReward = new CreateCustomRewardsRequest();
+            createReward.Title = "Move PNG-Me";
+            createReward.Cost = 250;
+            createReward.BackgroundColor = "#E69900";
+            createReward.Prompt = "Move my pngtuber image to a random spot around the border of the screen. EMBRACE THE CHAOS";
+            createReward.IsEnabled = true;
+
+            TwitchUtility.RecreateCustomPointsReward(createReward);
+        }
+
+        private void RecreateResetPNGMeRewardMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            WPFUtility.WriteToLog($"Recreating Reset PNG-Me points redeem...");
+
+            CreateCustomRewardsRequest createReward = new CreateCustomRewardsRequest();
+            createReward.Title = "Reset PNG-Me";
+            createReward.Cost = 100;
+            createReward.BackgroundColor = "#FFD37A";
+            createReward.Prompt = "Reset the pngtuber image to the bottom right corner of the screen. Return to normalcy.";
+            createReward.IsEnabled = true;
+
+            TwitchUtility.RecreateCustomPointsReward(createReward);
+        }
+
+        private void RecreateToggleCakeFaceRewardMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            WPFUtility.WriteToLog($"Recreating Toggle Cake Face points redeem...");
+
+            CreateCustomRewardsRequest createReward = new CreateCustomRewardsRequest();
+            createReward.Title = "Toggle Cake Face";
+            createReward.Cost = 500;
+            createReward.BackgroundColor = "#FF38DB";
+            createReward.Prompt = "Toggle whether webcam is on or off";
+            createReward.IsEnabled = false;
+
+            TwitchUtility.RecreateCustomPointsReward(createReward);
+        }
+
+
+
+
         async private void TestButton_Click(object sender, RoutedEventArgs e)
         {
-            //List<string> userIdList = new List<string>();
-            //userIdList.Add("156055800");
-            //userIdList.Add("1117028589");
-            //userIdList.Add("1388894751");
-            //userIdList.Add("37069375");
+            CreateCustomRewardsRequest createReward = new CreateCustomRewardsRequest();
+            createReward.Title = "Move PNG-Me";
+            createReward.Cost = 250;
+            createReward.BackgroundColor = "#E69900";
+            createReward.Prompt = "Move my pngtuber image to a random spot around the border of the screen. EMBRACE THE CHAOS";
+            createReward.IsEnabled = true;
 
-            ////, "", "", ""
-
-            //GetUsersResponse testResp = await GlobalObjects._TwitchAPI.Helix.Users.GetUsersAsync(ids: userIdList);
-
-            //if (testResp == null)
-            //    WPFUtility.WriteToLog("Test button: user list was null");
-
-            //foreach(var user in testResp.Users)
-            //{
-            //    WPFUtility.WriteToLog($"Test button: {user.Id}\t{user.Login}");
-            //}
-
-            //int resetResult = OBSUtility.ResetPNGTuber();
-            int moveResult = OBSUtility.MovePNGTuber();
-
-            //Random random = new Random();
-            //int border = random.Next(0, 4);
-            //double rawRotationAngle = Math.Round(random.NextDouble() * (45.00 - -45.00) + -45.00, 2);
-
-            //WPFUtility.WriteToLog($"Test: {rawRotationAngle}");
+            TwitchUtility.RecreateCustomPointsReward(createReward);
         }
 
         async private void TestModButton_Click(object sender, RoutedEventArgs e)
@@ -640,6 +694,12 @@ namespace TwitchBot
                 ShowRouletteSuccess.IsChecked = true;
             else
                 ShowRouletteSuccess.IsChecked = false;
+
+            RecreateTTSNormalRate.IsEnabled = true;
+            RecreateTTSRandomRate.IsEnabled = true;
+            RecreateMovePNGMeReward.IsEnabled = true;
+            RecreateResetPNGMeReward.IsEnabled = true;
+            RecreateToggleCakeFaceReward.IsEnabled = true;
         }
 
         async void InitializeWebServer()
@@ -960,7 +1020,7 @@ namespace TwitchBot
         {
             try
             {
-                string rouletteJsonInput = File.ReadAllText(ROULETTEJSONFILENAME);
+                string rouletteJsonInput = File.ReadAllText(TwitchChatCommands.ROULETTEJSONFILENAME);
 
                 var deserializedLeaderboard = JsonConvert.DeserializeObject<Dictionary<string, int>>(rouletteJsonInput);
                 if (deserializedLeaderboard == null)
@@ -988,6 +1048,12 @@ namespace TwitchBot
             CheckCurrentAccessToken.IsEnabled = false;
             ShowRouletteSuccess.IsEnabled = false;
             NinjaApiSilenceTTS.IsEnabled = false;
+
+            RecreateTTSNormalRate.IsEnabled = false;
+            RecreateTTSRandomRate.IsEnabled = false;
+            RecreateMovePNGMeReward.IsEnabled = false;
+            RecreateResetPNGMeReward.IsEnabled = false;
+            RecreateToggleCakeFaceReward.IsEnabled = false;
 
             TestButton.IsEnabled = false;
         }

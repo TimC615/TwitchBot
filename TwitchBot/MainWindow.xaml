@@ -47,6 +47,12 @@
 
                 <MenuItem Header="_Advanced">
                     <MenuItem Name="CheckCurrentAccessToken" Header="_Check Access Token" HorizontalAlignment="Left" IsEnabled="False" Click="CheckAccessTokenMenuItem_Click"/>
+                    <Separator></Separator>
+                    <MenuItem Name="RecreateTTSNormalRate" Header="_Recreate TTS (Normal Rate) Points Reward" HorizontalAlignment="Left" IsEnabled="False" Click="RecreateTTSNormalRateRewardMenuItem_Click"/>
+                    <MenuItem Name="RecreateTTSRandomRate" Header="_Recreate TTS (Random Rate) Points Reward" HorizontalAlignment="Left" IsEnabled="False" Click="RecreateTTSRandomRateRewardMenuItem_Click"/>
+                    <MenuItem Name="RecreateMovePNGMeReward" Header="_Recreate Move PNG-Me Points Reward" HorizontalAlignment="Left" IsEnabled="False" Click="RecreateMovePNGMeRewardMenuItem_Click"/>
+                    <MenuItem Name="RecreateResetPNGMeReward" Header="_Recreate Reset PNG-Me Points Reward" HorizontalAlignment="Left" IsEnabled="False" Click="RecreateResetPNGMeRewardMenuItem_Click"/>
+                    <MenuItem Name="RecreateToggleCakeFaceReward" Header="_Recreate Toggle Cake Face Points Reward" HorizontalAlignment="Left" IsEnabled="False" Click="RecreateToggleCakeFaceRewardMenuItem_Click"/>
                 </MenuItem>
             </Menu>
 

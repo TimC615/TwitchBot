@@ -42,8 +42,8 @@ namespace TwitchBot
 
         private static readonly int FIRSTLEADERBOARDTOPPOSITIONSTODISPLAY = 3; //used to determine how many users to show when displaying 
 
-        private static readonly string FIRSTREDEEMSJSONFILENAME = @"firstredeemsleaderboard.json";
-        private readonly string ROULETTEJSONFILENAME = @"rouletteleaderboard.json";
+        public static readonly string FIRSTREDEEMSJSONFILENAME = @"firstredeemsleaderboard.json";
+        public static readonly string ROULETTEJSONFILENAME = @"rouletteleaderboard.json";
 
         private Dictionary<string, int>? rouletteLeaderboard;
 

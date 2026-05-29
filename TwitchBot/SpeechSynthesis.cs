@@ -35,8 +35,8 @@ namespace TwitchBot
     {
         private static SpeechSynthesis Instance;
 
-        static readonly int SPEECHSYNTH_VOL = 80;
-        public static readonly int SPEECHSYNTH_RATE = 0;
+        private const int SPEECHSYNTH_VOL = 80;
+        private const int SPEECHSYNTH_RATE = 0;
         public SpeechSynthesizer synth;
         public SpeechSynthesizer asyncSynth;
 
@@ -66,7 +66,7 @@ namespace TwitchBot
 
         //use for general TTS needs
         //default value for customRate set to -100 to signify obvious impossible rate value
-        public void SpeechSynth(string input, int customRate = -100)
+        public void SpeechSynth(string input, int customRate = SPEECHSYNTH_RATE)
         {
             //Trace.WriteLine("SpeechSynth received: " + input);
 
@@ -90,12 +90,15 @@ namespace TwitchBot
         }
 
         //used for TTS points redeem
+        //default speech rate set to -100 to use the preset class rate value
         public void SpeechSynthAsync(string input, int customRate = -100)
         {
             //Trace.WriteLine("SpeechSynth received: " + input);
 
             asyncSynth.Volume = SPEECHSYNTH_VOL;
-            if (customRate == -100)
+
+            //ensuring customRate value is within the accepted range the synthesizer expects
+            if (customRate < -10 || customRate > 10)
                 asyncSynth.Rate = SPEECHSYNTH_RATE;
             else
                 asyncSynth.Rate = customRate;
