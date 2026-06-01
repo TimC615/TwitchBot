@@ -85,7 +85,7 @@ using static System.Formats.Asn1.AsnWriter;
 
 //look into maybe having preset locations users can send pngtuber to (in the case of specific games)
 
-
+//potentially add redemption pausing for toggling webcam (similar to move and reset png rewards)
 
 
 //---------------------------------------------------------------------------------------------------------------------------
