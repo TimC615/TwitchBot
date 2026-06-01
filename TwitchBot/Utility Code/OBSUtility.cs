@@ -239,5 +239,21 @@ namespace TwitchBot.Utility_Code
             }
         }
         
+        //checks current OBS scene if pngtuber scene item exists
+        //if true, unpause twitch points redeems related to pngtuber
+        //if false, pause those same redeeems
+        public static void CheckCurrSceneForPngtuber(string sceneName)
+        {
+            List<SceneItemDetails> sceneItemList = GlobalObjects._OBS.GetSceneItemList(sceneName);
+
+            SceneItemDetails pngtuberSceneItem = sceneItemList.FirstOrDefault(sceneItem => sceneItem.SourceName == GlobalObjects.ObsPngTuberName);
+
+            //pauses/resumes redemption of pngtuber Twitch points rewards based on if current scene has the pngtuber scene item
+            //primary way to tell viewers if they can actually redeem certain rewards as opposed to relying on autorefunding
+            if (pngtuberSceneItem == null)
+                TwitchUtility.TogglePngTuberManipulationRedeems(false);
+            else
+                TwitchUtility.TogglePngTuberManipulationRedeems(true);
+        }
     }
 }

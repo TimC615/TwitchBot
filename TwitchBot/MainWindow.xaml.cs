@@ -25,6 +25,7 @@ using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api.Helix.Models.ChannelPoints;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
 using TwitchLib.Api.Helix.Models.ChannelPoints.GetCustomReward;
+using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomReward;
 using TwitchLib.Api.Helix.Models.Channels.SendChatMessage;
 using TwitchLib.Api.Helix.Models.EventSub;
 using TwitchLib.Api.Helix.Models.Moderation.BanUser;
@@ -51,13 +52,6 @@ using static System.Formats.Asn1.AsnWriter;
 
 
 //---------------------------------------------------------------------------------------------------------------------------
-//maybe put in timed messages (eg: after 30 min shout out socials and following)
-
-//maybe put in automatic discord messaging? (eg: hey i'm live messages)
-
-//could be fun to have a twitch extension (or simply apply based on role of user) to add a border or effect to talking head
-
-
 //look into feature that allows user to add static chat commands during run time
 //(would probably need to implement a dictionary stored in a text file. key<string> = chat command [!command]   value<string> = static string to write to chat log)
 
@@ -81,18 +75,18 @@ using static System.Formats.Asn1.AsnWriter;
 
 //Borks itself when losing internet connection (i believe it's from not having a channel being watched?)
 
+
+
 //maybe bar at bottom of screen to track ad break progress??
 
 //add more "Twitch Plays" interactivity but, with low viewer counts, steer it more towards a "Twitch Interferes" as opposed to a full on twitch plays
 //look into having ui control of which game is triggered by "Twitch Plays" as opposed to having to manually control it through code (only needed if twitch plays is more commonly used/more game funtionality implemented)
 
 
-
 //look into maybe having preset locations users can send pngtuber to (in the case of specific games)
 
-//add automatic clearing or refunding of points redeems (works as intended = clear  error = refund)
 
-//potentially make it so points redeems like "move png-me" and "reset png-me" are only enabled when specific obs scenes are active (would require subscribing to onSceneChanged and maybe onBroadcastStart)
+
 
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
@@ -156,16 +150,6 @@ namespace TwitchBot
 
         //Other Objects
         SpeechSynthesis _SpeechSynth;
-
-        //Bot Commands
-        readonly Dictionary<string, string> CommandsStaticResponses = new Dictionary<string, string>
-        {
-            { "commands", "The current chat commands are: help, about, discord, twitter, lurk, joke, fact, roll, roulette, rouletteleaderboard, and 1st" },
-            { "about", "Hello! I'm TheCakeIsAPie__ and I'm a Canadian variety streamer. We play a bunch of stuff over here in this small corner of the internet. Come pop a seat and have fun watching the shenanigans!"},
-            { "discord", "Join the discord server at: https://discord.gg/uzHqnxKKkC"},
-            { "twitter", "Follow me on Twitter at: https://twitter.com/TheCakeIsAPi"},
-            { "lurk", "Have fun lurking!"}
-        };
 
         //used in UtilityCode.WPFUtility to get reference to the MainWindow (complains about thread ownership otherwise)
         public static MainWindow AppWindow
@@ -375,9 +359,6 @@ namespace TwitchBot
             TwitchUtility.RecreateCustomPointsReward(createReward);
         }
 
-
-
-
         private void RecreateMovePNGMeRewardMenuItem_Click(object sender, RoutedEventArgs e)
         {
             WPFUtility.WriteToLog($"Recreating Move PNG-Me points redeem...");
@@ -420,19 +401,14 @@ namespace TwitchBot
             TwitchUtility.RecreateCustomPointsReward(createReward);
         }
 
-
-
-
         async private void TestButton_Click(object sender, RoutedEventArgs e)
         {
-            CreateCustomRewardsRequest createReward = new CreateCustomRewardsRequest();
-            createReward.Title = "Move PNG-Me";
-            createReward.Cost = 250;
-            createReward.BackgroundColor = "#E69900";
-            createReward.Prompt = "Move my pngtuber image to a random spot around the border of the screen. EMBRACE THE CHAOS";
-            createReward.IsEnabled = true;
+            UpdateCustomRewardRequest updateReward = new UpdateCustomRewardRequest();
+            updateReward.IsPaused = false;
 
-            TwitchUtility.RecreateCustomPointsReward(createReward);
+            string rewardId = "";
+
+            await GlobalObjects._TwitchAPI.Helix.ChannelPoints.UpdateCustomRewardAsync(GlobalObjects.TwitchBroadcasterUserId, rewardId, updateReward);
         }
 
         async private void TestModButton_Click(object sender, RoutedEventArgs e)
@@ -816,6 +792,7 @@ namespace TwitchBot
 
             obs.Connected += Obs_onConnect;
             obs.Disconnected += Obs_onDisconnect;
+            obs.CurrentProgramSceneChanged += Obs_onCurrentProgramSceneChanged;
 
             try
             {
@@ -853,6 +830,9 @@ namespace TwitchBot
                 ConnectOBS.IsEnabled = false;
                 DisconnectOBS.IsEnabled = true;
             }));
+
+            //added here as a way to check obs scene when program opens. "onCurrentProgramSceneChanged" handles all other instances
+            OBSUtility.CheckCurrSceneForPngtuber(GlobalObjects._OBS.GetCurrentProgramScene());
         }
 
         private void Obs_onDisconnect(object sender, OBSWebsocketDotNet.Communication.ObsDisconnectionInfo e)
@@ -884,6 +864,11 @@ namespace TwitchBot
                 DisconnectOBS.IsEnabled = false;
             }));
             
+        }
+
+        private void Obs_onCurrentProgramSceneChanged(object sender, OBSWebsocketDotNet.Types.Events.ProgramSceneChangedEventArgs e)
+        {
+            OBSUtility.CheckCurrSceneForPngtuber(e.SceneName);
         }
         //
         //----------------------End of OBS Event Hookups----------------------

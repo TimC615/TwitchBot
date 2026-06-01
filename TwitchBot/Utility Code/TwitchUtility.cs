@@ -12,6 +12,7 @@ using TwitchLib.Api.Auth;
 using TwitchLib.Api.Helix.Models.ChannelPoints;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
 using TwitchLib.Api.Helix.Models.ChannelPoints.GetCustomReward;
+using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomReward;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomRewardRedemptionStatus;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateRedemptionStatus;
 using TwitchLib.Api.Helix.Models.Channels.SendChatMessage;
@@ -26,6 +27,11 @@ namespace TwitchBot.Utility_Code
 {
     class TwitchUtility
     {
+        static List<string> pngtuberRewardTitles = new List<string>
+        {
+             "Move PNG-Me", "Reset PNG-Me"
+        };
+
         public async static Task CheckAccessToken()
         {
             //Log("Checking AccessToken...");
@@ -76,6 +82,27 @@ namespace TwitchBot.Utility_Code
             catch(Exception except)
             {
                 WPFUtility.WriteToLog($"Error updating custom points redemtion status: {except.Message}");
+            }
+        }
+
+        public static async void TogglePngTuberManipulationRedeems(bool isEnabled)
+        {
+            GetCustomRewardsResponse manageableRewards = await GlobalObjects._TwitchAPI.Helix.ChannelPoints.GetCustomRewardAsync(GlobalObjects.TwitchBroadcasterUserId, onlyManageableRewards: true);
+            
+            foreach(CustomReward reward in manageableRewards.Data)
+            {
+
+                if (pngtuberRewardTitles.Contains(reward.Title))
+                {
+                    UpdateCustomRewardRequest updateRewardRequest = new UpdateCustomRewardRequest();
+
+                    if (isEnabled)
+                        updateRewardRequest.IsPaused = false;
+                    else
+                        updateRewardRequest.IsPaused = true;
+
+                    await GlobalObjects._TwitchAPI.Helix.ChannelPoints.UpdateCustomRewardAsync(GlobalObjects.TwitchBroadcasterUserId, reward.Id, updateRewardRequest);
+                }
             }
         }
 
