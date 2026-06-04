@@ -88,6 +88,11 @@ using static System.Formats.Asn1.AsnWriter;
 //potentially add redemption pausing for toggling webcam (similar to move and reset png rewards)
 
 
+
+
+//get recording of jank geese or find a way to force the jank
+
+
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
 {

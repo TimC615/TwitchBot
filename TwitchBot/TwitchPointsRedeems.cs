@@ -134,14 +134,22 @@ namespace TwitchBot
 
                         if (!webcamEnabled)
                         {
+                            //enable webcam, disable pngtuber
                             GlobalObjects._OBS.SetSceneItemEnabled(currSceneName, webcamItemID, true);
                             GlobalObjects._OBS.SetSceneItemEnabled(currSceneName, reactiveImageID, false);
+
+                            TwitchUtility.TogglePngTuberManipulationRedeems(false);
+
                             WPFUtility.WriteToLog("Toggle Webcam: Webcam enabled");
                         }
                         else
                         {
+                            //disable webcam, enable pngtuber
                             GlobalObjects._OBS.SetSceneItemEnabled(currSceneName, webcamItemID, false);
                             GlobalObjects._OBS.SetSceneItemEnabled(currSceneName, reactiveImageID, true);
+
+                            TwitchUtility.TogglePngTuberManipulationRedeems(true);
+
                             WPFUtility.WriteToLog("Toggle Webcam: Webcam disabled");
                         }
 

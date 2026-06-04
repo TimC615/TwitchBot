@@ -277,6 +277,7 @@ namespace TwitchBot.Utility_Code
         {
             List<SceneItemDetails> sceneItemList = GlobalObjects._OBS.GetSceneItemList(sceneName);
 
+
             SceneItemDetails pngtuberSceneItem = sceneItemList.FirstOrDefault(sceneItem => sceneItem.SourceName == GlobalObjects.ObsPngTuberName);
 
             //pauses/resumes redemption of pngtuber Twitch points rewards based on if current scene has the pngtuber scene item
@@ -284,7 +285,14 @@ namespace TwitchBot.Utility_Code
             if (pngtuberSceneItem == null)
                 TwitchUtility.TogglePngTuberManipulationRedeems(false);
             else
-                TwitchUtility.TogglePngTuberManipulationRedeems(true);
+            {
+                //returns true if pngtuber item is enabled (visible) in current OBS scene
+                if (GlobalObjects._OBS.GetSceneItemEnabled(sceneName, pngtuberSceneItem.ItemId))
+                    TwitchUtility.TogglePngTuberManipulationRedeems(true);
+                else
+                    TwitchUtility.TogglePngTuberManipulationRedeems(false);
+            }
+                
         }
     }
 }
