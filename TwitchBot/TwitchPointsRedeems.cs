@@ -275,7 +275,7 @@ namespace TwitchBot
         {
             SpeechSynthesis _SpeechSynth = SpeechSynthesis.GetInstance();
 
-            if (GlobalObjects._OBS.IsConnected)
+            if (GlobalObjects._OBS != null && GlobalObjects._OBS.IsConnected)
             {
                 string ttsSceneName = GlobalObjects._OBS.GetCurrentProgramScene();
 
@@ -289,7 +289,7 @@ namespace TwitchBot
                     {
                         await TwitchUtility.CheckAccessToken();
 
-                        //Log("TTS Talking Head Source Found");
+                        //WPFUtility.WriteToLog($"TTS Talking Head Source Found");
 
                         //get id and login of user, send request to Twitch API to get profile image url, and set obs browser source to url
                         List<string> idSearch = new List<string>();

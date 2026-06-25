@@ -84,6 +84,14 @@ namespace TwitchBot.Utility_Code
                         transformInfo.Y = 698.00;
                         break;
 
+                    //case ("Game Capture (FS)"):
+                    //    transformInfo.Width = 400.00;
+                    //    transformInfo.Height = 600.00;
+
+                    //    transformInfo.X = 1755.50;
+                    //    transformInfo.Y = 784.00;
+                    //    break;
+
                     default:
                         transformInfo.Width = 400.00;
                         transformInfo.Height = 600.00;

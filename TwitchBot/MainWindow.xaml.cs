@@ -55,9 +55,6 @@ using static System.Formats.Asn1.AsnWriter;
 //look into feature that allows user to add static chat commands during run time
 //(would probably need to implement a dictionary stored in a text file. key<string> = chat command [!command]   value<string> = static string to write to chat log)
 
-
-//see if toggling enabled points redeems is possible
-
 //Link the starting of EventSub websocket code to user pressing "start bot" WPF button (still not sure how to do this as it's in dependancy injection)
 
 //Can move APINinja code to it's own singleton class
@@ -88,10 +85,7 @@ using static System.Formats.Asn1.AsnWriter;
 //potentially add redemption pausing for toggling webcam (similar to move and reset png rewards)
 
 
-
-
 //get recording of jank geese or find a way to force the jank
-
 
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
@@ -799,6 +793,12 @@ namespace TwitchBot
             obs.Disconnected += Obs_onDisconnect;
             obs.CurrentProgramSceneChanged += Obs_onCurrentProgramSceneChanged;
 
+
+            //by default disable redemption status of obs-based rewards 
+            TwitchUtility.TogglePngTuberManipulationRedeems(false);
+            TwitchUtility.ToggleOtherOBSbasedRedeems(false);
+
+
             try
             {
                 //setting port to 4455 conflicts with Sound Alerts. creates jarbled mess of the incoming sound bites
@@ -836,8 +836,12 @@ namespace TwitchBot
                 DisconnectOBS.IsEnabled = true;
             }));
 
+
             //added here as a way to check obs scene when program opens. "onCurrentProgramSceneChanged" handles all other instances
             OBSUtility.CheckCurrSceneForPngtuber(GlobalObjects._OBS.GetCurrentProgramScene());
+
+            //enable all other obs-based points redeems as obs has been detected
+            TwitchUtility.ToggleOtherOBSbasedRedeems(true);
         }
 
         private void Obs_onDisconnect(object sender, OBSWebsocketDotNet.Communication.ObsDisconnectionInfo e)
@@ -863,7 +867,12 @@ namespace TwitchBot
                     Log("obs_onDisconnect error: " + ex.Message);
                 }
             }
-            
+
+            //disable redemtion of all points redeems that require obs
+            TwitchUtility.TogglePngTuberManipulationRedeems(false);
+            TwitchUtility.ToggleOtherOBSbasedRedeems(false);
+
+
             Dispatcher.BeginInvoke(new Action(() => {
                 ConnectOBS.IsEnabled = true;
                 DisconnectOBS.IsEnabled = false;

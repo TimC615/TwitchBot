@@ -32,6 +32,11 @@ namespace TwitchBot.Utility_Code
              "Move PNG-Me", "Reset PNG-Me"
         };
 
+        static List<string> ttsRewardTitles = new List<string>
+        {
+            "TTS (Normal Speech Rate)", "TTS (Random Speech Rate)"
+        };
+
         public async static Task CheckAccessToken()
         {
             //Log("Checking AccessToken...");
@@ -93,6 +98,29 @@ namespace TwitchBot.Utility_Code
             {
 
                 if (pngtuberRewardTitles.Contains(reward.Title))
+                {
+                    UpdateCustomRewardRequest updateRewardRequest = new UpdateCustomRewardRequest();
+
+                    if (isEnabled)
+                        updateRewardRequest.IsPaused = false;
+                    else
+                        updateRewardRequest.IsPaused = true;
+
+                    await GlobalObjects._TwitchAPI.Helix.ChannelPoints.UpdateCustomRewardAsync(GlobalObjects.TwitchBroadcasterUserId, reward.Id, updateRewardRequest);
+                }
+            }
+        }
+
+        //toggles twitch points redeems that require obs to work
+        public static async void ToggleOtherOBSbasedRedeems(bool isEnabled)
+        {
+            GetCustomRewardsResponse manageableRewards = await GlobalObjects._TwitchAPI.Helix.ChannelPoints.GetCustomRewardAsync(GlobalObjects.TwitchBroadcasterUserId, onlyManageableRewards: true);
+
+            foreach (CustomReward reward in manageableRewards.Data)
+            {
+
+                //if more obs-based redeems are added in future, add lists of the reward titles here
+                if (ttsRewardTitles.Contains(reward.Title))
                 {
                     UpdateCustomRewardRequest updateRewardRequest = new UpdateCustomRewardRequest();
 
