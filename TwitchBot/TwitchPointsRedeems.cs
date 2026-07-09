@@ -64,7 +64,7 @@ namespace TwitchBot
         //----------------------End of PubSub Event Hookups----------------------
         //
 
-        public static void OnChannelPointsRewardRedeemed(ChannelPointsCustomRewardRedemptionArgs e)
+        public async static void OnChannelPointsRewardRedeemed(ChannelPointsCustomRewardRedemptionArgs e)
         {
             //Log("PubSub: " + e.RewardRedeemed.Redemption.Reward.Title);
             var pointsRedemption = e.Payload.Event;
@@ -74,6 +74,7 @@ namespace TwitchBot
             switch (redeemTitle)
             {
                 case "toggle cake face":
+                    await TwitchUtility.CheckAccessToken();
                     ToggleCakeFace(pointsRedemption);
                     break;
 
@@ -81,10 +82,13 @@ namespace TwitchBot
                     Random random = new Random();
                     int randRate = random.Next(1, 21) - 10;
 
+                    await TwitchUtility.CheckAccessToken();
+
                     TtsRedeem(pointsRedemption, randRate);
                     break;
 
                 case "tts (normal speech rate)":
+                    await TwitchUtility.CheckAccessToken();
                     TtsRedeem(pointsRedemption);
                     break;
 
@@ -93,10 +97,12 @@ namespace TwitchBot
                     break;
 
                 case "move png-me":
+                    await TwitchUtility.CheckAccessToken();
                     MovePngMe(pointsRedemption);
                     break;
 
                 case "reset png-me":
+                    await TwitchUtility.CheckAccessToken();
                     ResetPngMe(pointsRedemption);
                     break;
             }

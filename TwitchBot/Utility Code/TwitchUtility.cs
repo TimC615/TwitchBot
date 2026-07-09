@@ -37,7 +37,7 @@ namespace TwitchBot.Utility_Code
             "TTS (Normal Speech Rate)", "TTS (Random Speech Rate)"
         };
 
-        public async static Task CheckAccessToken()
+        public async static Task CheckAccessToken(int secondsRemainingCheck = 10)
         {
             //Log("Checking AccessToken...");
 
@@ -46,7 +46,7 @@ namespace TwitchBot.Utility_Code
 
             //tokenResult is null if current Access Token is invalid
             //added ExpiresIn case to allow for the code needing an access token to fully execute
-            if (tokenResult == null || tokenResult.ExpiresIn <= 10)
+            if (tokenResult == null || tokenResult.ExpiresIn <= secondsRemainingCheck)
             {
                 WPFUtility.WriteToLog("CheckAccessToken: Bad token, refreshing");
 
@@ -141,7 +141,8 @@ namespace TwitchBot.Utility_Code
 
             WPFUtility.WriteToLog("EventSub OnCommercial: Ads started for " + commercialBreakLength + " seconds");
 
-            await MainWindow.AppWindow.CheckAccessToken();
+            //checks api token and ensures it will be valid for total ad length and have enough buffer to send "ad done" message
+            await CheckAccessToken(threadSleepLength + 5);
 
             string commercialBreakMessage = "";
             if (commercialBreakLength >= 60)

@@ -87,6 +87,12 @@ using static System.Formats.Asn1.AsnWriter;
 
 //get recording of jank geese or find a way to force the jank
 
+
+//have more checks for invalid oauth token
+//maybe timer?
+//maybe a global catch for the bad oauth exception (if even possible)?
+//maybe just ugly version of checking with checker method before doing anything twitch-based
+
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
 {

@@ -70,6 +70,7 @@ namespace TwitchBot
             string[] messageInputs = e.Message.Text.ToLower().Split(' ');
             string cleanedCommandName = messageInputs[0].Remove(0, 1);  //removes the leading '!' from the first element of the array
 
+            await TwitchUtility.CheckAccessToken();
 
             //2 ways to deal with commands: if/switch statements OR dictionary lookups
 
