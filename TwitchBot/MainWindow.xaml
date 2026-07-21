@@ -10,32 +10,34 @@
 
         <StackPanel Orientation="Vertical">
             <!-- https://stackoverflow.com/questions/9936796/create-a-menu-bar-in-wpf -->
+
+            <!--            Menu bar items          -->
             <Menu VerticalAlignment="Top" Width="Auto" Height="20">
                 <MenuItem Header="_File">
                     <MenuItem Name="Settings" Header="_Settings" HorizontalAlignment="Left" Click="SettingsButton_Click"/>
                     <MenuItem x:Name="AppExit" Header="Exit" HorizontalAlignment="Left" Click="CloseMenuItem_Click"/>
                 </MenuItem>
-                
+
                 <MenuItem Header="_Launch">
                     <MenuItem Name="ConnectToTwitch" Header="_Start Bot" HorizontalAlignment="Left" Click="StartBotMenuItem_Click"/>
                     <MenuItem Name="StopBotMenuItem" Header="_Stop Bot" HorizontalAlignment="Left" IsEnabled="False" Click="StopBotMenuItem_Click"/>
                     <MenuItem Name="RestartBotMenuItem" Header="_Restart Bot" HorizontalAlignment="Left" IsEnabled="False" Click="RestartBotMenuItem_Click"/>
                     <Separator></Separator>
-                    
+
                     <MenuItem Name="ConnectOnLaunchMenuItem" Header="_Start Bot on App Launch" HorizontalAlignment="Left" IsCheckable="True" Checked="ConnectBotOnLaunchMenuItem_Checked" Unchecked="ConnectBotOnLaunchMenuItem_Unchecked"/>
                     <Separator></Separator>
-                    
+
                     <MenuItem Name="twitchPlaysButton" Header="_Start Twitch Plays" HorizontalAlignment="Left" IsEnabled="False" Click="TwitchPlaysButton_Click"/>
                 </MenuItem>
-                
+
                 <MenuItem Header="_TTS">
                     <MenuItem Name="SpeechSynthPauseResume" Header="_Pause TTS" HorizontalAlignment="Left" IsEnabled="False" Click="PauseResumeTTSMenuItem_Click"/>
                     <Separator></Separator>
-                    
+
                     <MenuItem Name="SpeechSynthClearAllPrompts" Header="_Clear TTS Queue" HorizontalAlignment="Left" IsEnabled="False" Click="ClearAllTTSPromptsMenuItem_Click"/>
                     <MenuItem Name="NinjaApiSilenceTTS" Header="_Silence Ninja API TTS" HorizontalAlignment="Left" IsEnabled="False" IsCheckable="True" Checked="SilenceNinjaApiTTSMenuItem_Checked" Unchecked="SilenceNinjaApiTTSMenuItem_Unchecked"/>
                 </MenuItem>
-                
+
                 <MenuItem Header="_OBS">
                     <MenuItem Name="ConnectOBS" Header="_Connect OBS" HorizontalAlignment="Left" IsEnabled="False" Click="ConnectOBSMenuItem_Click"/>
                     <MenuItem Name="DisconnectOBS" Header="_Disconnect OBS" HorizontalAlignment="Left" IsEnabled="False" Click="DisconnectOBSMenuItem_Click"/>
@@ -53,9 +55,11 @@
                     <MenuItem Name="RecreateMovePNGMeReward" Header="_Recreate Move PNG-Me Points Reward" HorizontalAlignment="Left" IsEnabled="False" Click="RecreateMovePNGMeRewardMenuItem_Click"/>
                     <MenuItem Name="RecreateResetPNGMeReward" Header="_Recreate Reset PNG-Me Points Reward" HorizontalAlignment="Left" IsEnabled="False" Click="RecreateResetPNGMeRewardMenuItem_Click"/>
                     <MenuItem Name="RecreateToggleCakeFaceReward" Header="_Recreate Toggle Cake Face Points Reward" HorizontalAlignment="Left" IsEnabled="False" Click="RecreateToggleCakeFaceRewardMenuItem_Click"/>
+                    <MenuItem Name="RecreateDiscountedRedeemsReward" Header="_Recreate Discounted Redeems Points Reward" HorizontalAlignment="Left" IsEnabled="False" Click="RecreateDiscountedRedeemsRewardMenuItem_Click"/>
                 </MenuItem>
             </Menu>
-
+            <!--            End of menu bar items           -->
+            
             <TextBox x:Name="ConsoleLog" HorizontalAlignment="Left" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="540" Height="301" x:FieldModifier="public" Margin="10,20,10,0" Padding="0,0,5,0" IsReadOnly="True" VerticalScrollBarVisibility="Auto"/>
 
             <StackPanel Orientation="Horizontal" Margin="0,15,0,0">

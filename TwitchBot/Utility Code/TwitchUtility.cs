@@ -25,6 +25,38 @@ using TwitchLib.PubSub.Events;
 
 namespace TwitchBot.Utility_Code
 {
+    public class ResetReward
+    {
+        string rewardId;
+        string rewardTitle;
+        int rewardCost;
+
+        public ResetReward(string rewardId, string rewardTitle, int rewardCost)
+        {
+            this.rewardId = rewardId;
+            this.rewardTitle = rewardTitle;
+            this.rewardCost = rewardCost;
+        }
+
+        public string getId()
+        {
+            return this.rewardId;
+        }
+
+        //title probably isn't needed in the grand scheme of things but in case I want to filter by title in the future
+        public string getTitle()
+        {
+            return rewardTitle;
+        }
+
+        public int getCost()
+        {
+            return rewardCost;
+        }
+    }
+
+
+
     class TwitchUtility
     {
         static List<string> pngtuberRewardTitles = new List<string>
@@ -164,6 +196,8 @@ namespace TwitchBot.Utility_Code
         {
             Thread.Sleep(banLength * 1000); //wait for user's timeout to finish (seconds)
 
+            await TwitchUtility.CheckAccessToken();
+
             try
             {
                 await _TwitchAPI.Helix.Moderation.AddChannelModeratorAsync(TwitchChannelId, userIdToMod);
@@ -272,6 +306,31 @@ namespace TwitchBot.Utility_Code
 
             if(rewardCreated)
                 WPFUtility.WriteToLog($"Successfully created new points reward \"{createReward.Title}\". Currently can't autoset images to rewards made this way so this has to be done manually on Twitch.");
+        }
+
+        static async public void ResetPointsRedeemCosts(List<ResetReward> rewardsToReset)
+        {
+            int threadSleepLength = 30 * 1000;
+            Thread.Sleep(threadSleepLength);
+
+            await TwitchUtility.CheckAccessToken();
+
+            WPFUtility.WriteToLog($"Returning bot-owned rewards to original prices...");
+
+            try
+            {
+                foreach (ResetReward reward in rewardsToReset)
+                {
+                    UpdateCustomRewardRequest rewardUpdate = new UpdateCustomRewardRequest();
+                    rewardUpdate.Cost = reward.getCost();
+
+                    await GlobalObjects._TwitchAPI.Helix.ChannelPoints.UpdateCustomRewardAsync(GlobalObjects.TwitchBroadcasterUserId, reward.getId(), rewardUpdate);
+                }
+            }
+            catch(Exception except)
+            {
+                WPFUtility.WriteToLog($"ResetPointsRedeemCosts error: {except.Message}");
+            }
         }
     }
 }

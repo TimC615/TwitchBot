@@ -88,10 +88,28 @@ using static System.Formats.Asn1.AsnWriter;
 //get recording of jank geese or find a way to force the jank
 
 
+
+//change wpf log text to make different entries more obvious
+//e.g. different colours for each entry (red, green, red, green, etc...) or bolding text (normal, bold, normal, bold, etc...)
+
+//Can't do this with a standard text box.
+//probably will either need to use a rich text box or use a stackpanel with a new textbox added for each new entry to force different background/bolding for each new textbox
+
+
+//points redeem to make all other bot points rewards 50% off
+//maybe make all bot redeems 1 point instead
+//either time-based or total number of redeems based
+
+
+
+
+//--------IMPLEMENTED BUT NOT TESTED--------
+
 //have more checks for invalid oauth token
 //maybe timer?
 //maybe a global catch for the bad oauth exception (if even possible)?
 //maybe just ugly version of checking with checker method before doing anything twitch-based
+//EITHER HAVE RUNNING IN THE BACKGROUND FOR A FEW HOURS OR WAIT FOR A NOT CHATTY STREAM TO TEST
 
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
@@ -400,11 +418,60 @@ namespace TwitchBot
             createReward.Title = "Toggle Cake Face";
             createReward.Cost = 500;
             createReward.BackgroundColor = "#FF38DB";
-            createReward.Prompt = "Toggle whether webcam is on or off";
+            createReward.Prompt = "Toggle whether webcam is on or off.";
             createReward.IsEnabled = false;
 
             TwitchUtility.RecreateCustomPointsReward(createReward);
         }
+
+        private void RecreateDiscountedRedeemsRewardMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            WPFUtility.WriteToLog($"Recreating Discounted Redeems points redeem...");
+
+            CreateCustomRewardsRequest createReward = new CreateCustomRewardsRequest();
+            createReward.Title = "Discounted Bot Redemptions";
+            createReward.Cost = 2500;
+            createReward.BackgroundColor = "#FF38DB";
+            createReward.Prompt = "Make it so all bot-based points rewards cost 1 point for a short period of time.";
+            createReward.IsGlobalCooldownEnabled = true;
+            createReward.GlobalCooldownSeconds = 60;
+            createReward.IsEnabled = true;
+
+            TwitchUtility.RecreateCustomPointsReward(createReward);
+        }
+
+
+        private void CloseMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            CloseEverything();
+
+            this.Close();
+        }
+
+        //Ensures connections to APIs and local web server is closed when exiting application
+        protected void MainWindow_Closing(object sender, EventArgs e)
+        {
+            if(_TwitchAPI != null)
+            {
+                try
+                {   //updates list of subscribed api events to iterate through and close. probably not needed (leave open and let erode after enough time) but feels nice to do this
+                    GlobalObjects.EventSubSubscribedEvents = _TwitchAPI.Helix.EventSub.GetEventSubSubscriptionsAsync().Result.Subscriptions;
+                }
+                catch (AggregateException)
+                {
+                    Log("Exception when closing application: AggregateException");
+                }
+                catch (Exception mainWindowCloseExcept)
+                {
+                    Log($"Exception when closing application: {mainWindowCloseExcept.Message}");
+                }
+            }
+
+            CloseEverything();
+        }
+
+
+
 
         async private void TestButton_Click(object sender, RoutedEventArgs e)
         {
@@ -524,35 +591,6 @@ namespace TwitchBot
         private void CheckAccessTokenMenuItem_Click(object sender, RoutedEventArgs e)
         {
             ManualCheckAccessToken();
-        }
-
-        private void CloseMenuItem_Click(object sender, RoutedEventArgs e)
-        {
-            CloseEverything();
-
-            this.Close();
-        }
-
-        //Ensures connections to APIs and local web server is closed when exiting application
-        protected void MainWindow_Closing(object sender, EventArgs e)
-        {
-            if(_TwitchAPI != null)
-            {
-                try
-                {   //updates list of subscribed api events to iterate through and close. probably not needed (leave open and let erode after enough time) but feels nice to do this
-                    GlobalObjects.EventSubSubscribedEvents = _TwitchAPI.Helix.EventSub.GetEventSubSubscriptionsAsync().Result.Subscriptions;
-                }
-                catch (AggregateException)
-                {
-                    Log("Exception when closing application: AggregateException");
-                }
-                catch (Exception mainWindowCloseExcept)
-                {
-                    Log($"Exception when closing application: {mainWindowCloseExcept.Message}");
-                }
-            }
-
-            CloseEverything();
         }
         //
         //----------------------End of WPF Interaction Methods----------------------
@@ -681,6 +719,7 @@ namespace TwitchBot
             RecreateMovePNGMeReward.IsEnabled = true;
             RecreateResetPNGMeReward.IsEnabled = true;
             RecreateToggleCakeFaceReward.IsEnabled = true;
+            RecreateDiscountedRedeemsReward.IsEnabled = true;
         }
 
         async void InitializeWebServer()
@@ -842,12 +881,18 @@ namespace TwitchBot
                 DisconnectOBS.IsEnabled = true;
             }));
 
+            try
+            {
+                //added here as a way to check obs scene when program opens. "onCurrentProgramSceneChanged" handles all other instances
+                OBSUtility.CheckCurrSceneForPngtuber(GlobalObjects._OBS.GetCurrentProgramScene());
 
-            //added here as a way to check obs scene when program opens. "onCurrentProgramSceneChanged" handles all other instances
-            OBSUtility.CheckCurrSceneForPngtuber(GlobalObjects._OBS.GetCurrentProgramScene());
-
-            //enable all other obs-based points redeems as obs has been detected
-            TwitchUtility.ToggleOtherOBSbasedRedeems(true);
+                //enable all other obs-based points redeems as obs has been detected
+                TwitchUtility.ToggleOtherOBSbasedRedeems(true);
+            }
+            catch(Exception except)
+            {
+                WPFUtility.WriteToLog($"Obs_onConnect Error: {except.Message}");
+            }
         }
 
         private void Obs_onDisconnect(object sender, OBSWebsocketDotNet.Communication.ObsDisconnectionInfo e)
@@ -1059,6 +1104,7 @@ namespace TwitchBot
             RecreateMovePNGMeReward.IsEnabled = false;
             RecreateResetPNGMeReward.IsEnabled = false;
             RecreateToggleCakeFaceReward.IsEnabled = false;
+            RecreateDiscountedRedeemsReward.IsEnabled = false;
 
             TestButton.IsEnabled = false;
         }

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using TwitchBot.Utility_Code;
+using TwitchLib.Api.Helix.Models.ChannelPoints.GetCustomReward;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomReward;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomRewardRedemptionStatus;
 using TwitchLib.Api.Helix.Models.Channels.GetChannelInformation;
@@ -71,10 +72,12 @@ namespace TwitchBot
             string redeemTitle = pointsRedemption.Reward.Title.ToLower();
             WPFUtility.WriteToLog("Points Reward: " + redeemTitle);
 
+            //not guarenteed all points redeems requires API key to be valid but probably easier to force a check in case I forget to add a check to a future redeem
+            await TwitchUtility.CheckAccessToken();
+
             switch (redeemTitle)
             {
                 case "toggle cake face":
-                    await TwitchUtility.CheckAccessToken();
                     ToggleCakeFace(pointsRedemption);
                     break;
 
@@ -82,13 +85,10 @@ namespace TwitchBot
                     Random random = new Random();
                     int randRate = random.Next(1, 21) - 10;
 
-                    await TwitchUtility.CheckAccessToken();
-
                     TtsRedeem(pointsRedemption, randRate);
                     break;
 
                 case "tts (normal speech rate)":
-                    await TwitchUtility.CheckAccessToken();
                     TtsRedeem(pointsRedemption);
                     break;
 
@@ -97,13 +97,15 @@ namespace TwitchBot
                     break;
 
                 case "move png-me":
-                    await TwitchUtility.CheckAccessToken();
                     MovePngMe(pointsRedemption);
                     break;
 
                 case "reset png-me":
-                    await TwitchUtility.CheckAccessToken();
                     ResetPngMe(pointsRedemption);
+                    break;
+
+                case "discounted bot redemptions":
+                    DiscountedRedemptions(pointsRedemption);
                     break;
             }
         }
@@ -341,6 +343,67 @@ namespace TwitchBot
                 //trigger TTS without calling obs-related methods
                 _SpeechSynth.SpeechSynthAsync(e.UserInput, speechRate);
             }
+        }
+
+        async private static void DiscountedRedemptions(ChannelPointsCustomRewardRedemption e)
+        {
+            GetCustomRewardsResponse botMadeRewards;
+
+            try
+            {
+                botMadeRewards = await GlobalObjects._TwitchAPI.Helix.ChannelPoints.GetCustomRewardAsync(GlobalObjects.TwitchBroadcasterUserId, onlyManageableRewards: true);
+            }
+            catch(Exception except)
+            {
+                WPFUtility.WriteToLog($"DiscountedRedeptions error getting rewards: {except.Message}");
+
+                WPFUtility.WriteToLog($"Ending DiscountedRedepmtions early due to error...");
+                return;
+            }
+
+
+            List<ResetReward> rewardsToReset = new List<ResetReward>();
+
+
+            WPFUtility.WriteToLog($"Making bot-owned rewards cheaper...");
+
+            foreach (var reward in botMadeRewards.Data)
+            {
+                //ignore the discount redeem itself. no need for this to be cheaper due to its cooldown
+                if(reward.Id == e.Reward.Id)
+                    continue;
+
+                ResetReward rewardToReset = new ResetReward(reward.Id, reward.Title, reward.Cost);
+                rewardsToReset.Add(rewardToReset);
+
+                UpdateCustomRewardRequest rewardUpdate = new UpdateCustomRewardRequest();
+                rewardUpdate.Cost = 1;
+
+                try
+                {
+                    await GlobalObjects._TwitchAPI.Helix.ChannelPoints.UpdateCustomRewardAsync(GlobalObjects.TwitchBroadcasterUserId, reward.Id, rewardUpdate);
+                }
+                catch (Exception except)
+                {
+                    WPFUtility.WriteToLog($"DiscountedRedeptions error for \"{reward.Title}\": {except.Message}");
+                }
+            }
+            
+            //currently does not handle automatic refunding
+            UpdateCustomRewardRedemptionStatusRequest request = new UpdateCustomRewardRedemptionStatusRequest();
+            request.Status = TwitchLib.Api.Core.Enums.CustomRewardRedemptionStatus.FULFILLED;
+
+            await GlobalObjects._TwitchAPI.Helix.ChannelPoints.UpdateRedemptionStatusAsync(
+                GlobalObjects.TwitchBroadcasterUserId,
+                e.Reward.Id,
+                new List<string> { e.Id },
+                request);
+
+            //start reset on new thread so sleeping won't pause all other points redemption logic
+            new Thread(delegate () {
+                TwitchUtility.ResetPointsRedeemCosts(rewardsToReset);
+            }).Start();
+            
         }
     }
 }
