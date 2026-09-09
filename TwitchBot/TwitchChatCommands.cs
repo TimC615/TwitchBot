@@ -45,8 +45,6 @@ namespace TwitchBot
         public static readonly string FIRSTREDEEMSJSONFILENAME = @"firstredeemsleaderboard.json";
         public static readonly string ROULETTEJSONFILENAME = @"rouletteleaderboard.json";
 
-        private Dictionary<string, int>? rouletteLeaderboard;
-
         Dictionary<string, string> CommandsStaticResponses = new Dictionary<string, string>
         {
             { "cakebot", "Beep Boop! I'm CakeBot, a Twitch bot made by TheCakeIsAPie__. Interact with me either through chat commands or certain points redeems. If you have any ideas for new features or improvements, feel free to suggest them!"},
@@ -137,13 +135,7 @@ namespace TwitchBot
                 //Random chance for user to time themself out. If user has roles, automatically re-apply once timeout is done
                 if (cleanedCommandName.Equals("roulette"))
                 {
-
-                    foreach (string inputTest in messageInputs)
-                    {
-                        WPFUtility.WriteToLog($"Roulette Input: \"{inputTest}\"");
-                    }
-                    
-                    //Spin the wheel x times (default is once)
+                    //Spin the wheel once (no specified spin number from user so use default)
                     if (messageInputs.Length == 1)
                         RouletteCommand(e);
                         //WPFUtility.WriteToLog($"Roulette Test: input length == 1");
@@ -301,6 +293,7 @@ namespace TwitchBot
                 Random random = new Random();
                 for (int spin = 1; spin <= totalSpins; spin++)
                 {
+                    //"succeeded" the roulette spin. timeout the user
                     if (random.Next(1, 11) == 1)
                     {
                         int totalTimeoutLength;
@@ -317,27 +310,29 @@ namespace TwitchBot
 
                         RouletteTimeout(e.ChatterUserLogin, e.ChatterUserId, e.ChatterUserName, e.MessageId, totalTimeoutLength, e.IsModerator);
 
+                        WPFUtility.WriteToLog($"User {e.ChatterUserName} failed the roulette on spin {spin} of a total of {totalSpins} spin(s)");
+
                         //stops looping through parent for loop since user has failed at least 1 of the x spins they asked for
                         return;
                     }
                 }
 
-                //rouletteLeaderboard = GetRouletteLeaderboardFromJson();
-                rouletteLeaderboard = GetLeaderboardFromJson(ROULETTEJSONFILENAME);
+                //only reaches here if user is NOT going to be timed out
+
+                Dictionary<string, int>? rouletteLeaderboard = GetLeaderboardFromJson(ROULETTEJSONFILENAME);
 
                 if(rouletteLeaderboard == null)
                 {
                     throw new Exception("Roulette leaderboard has been initialized to null");
                 }
 
-                //only reaches here if user succeeds all roulette spins
                 //check if user is in leaderboard already
                 if (rouletteLeaderboard.ContainsKey(e.ChatterUserLogin))
-                {
-                    rouletteLeaderboard[e.ChatterUserLogin] += totalSpins;
-                }
+                    rouletteLeaderboard[e.ChatterUserLogin] = rouletteLeaderboard[e.ChatterUserLogin] + totalSpins;
                 else
                     rouletteLeaderboard.Add(e.ChatterUserLogin, 1);
+
+                SaveRouletteLeaderboardToJson(rouletteLeaderboard);
 
                 int rouletteLeaderboardCount = rouletteLeaderboard[e.ChatterUserLogin];
 
@@ -349,8 +344,6 @@ namespace TwitchBot
                     
                     TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, rouletteSurvivalMessage, e.MessageId, true);
                 }
-
-                SaveRouletteLeaderboardToJson();
             }
             catch (Exception except)
             {
@@ -360,9 +353,10 @@ namespace TwitchBot
 
         async void RouletteTimeout(string senderUsername, string senderUserId, string senderDisplayName, string parentMessageId, int timeoutLength, bool isModerator)
         {
+            Dictionary<string, int>? rouletteLeaderboard;
+
             try
             {
-                //rouletteLeaderboard = GetRouletteLeaderboardFromJson();
                 rouletteLeaderboard = GetLeaderboardFromJson(ROULETTEJSONFILENAME);
 
                 if (rouletteLeaderboard == null)
@@ -382,13 +376,13 @@ namespace TwitchBot
                 rouletteLeaderboard.Remove(senderUsername);
             }
 
-            SaveRouletteLeaderboardToJson();
+            SaveRouletteLeaderboardToJson(rouletteLeaderboard);
 
             string timeoutRouletteMessage = "";
             if(leaderboardSpins != 0)
-                timeoutRouletteMessage = $"{senderDisplayName} won the roulette and timed themselves out for {timeoutLength} seconds after surviving {leaderboardSpins} spins!";
+                timeoutRouletteMessage = $"{senderDisplayName} won the roulette and timed themselves out for {timeoutLength} seconds after a streak of {leaderboardSpins} spins!";
             else
-                timeoutRouletteMessage = $"{senderDisplayName} won the roulette and timed themselves out for {timeoutLength} seconds on their first spin!";
+                timeoutRouletteMessage = $"{senderDisplayName} won the roulette and timed themselves out for {timeoutLength} seconds without having an active streak!";
 
             TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, timeoutRouletteMessage, parentMessageId, true);
 
@@ -409,9 +403,10 @@ namespace TwitchBot
 
             if (isModerator)
             {
+                //must put this on a new thread so the bot can do other things while sleeping this thread until it can re-mod the user
                 new Thread(delegate ()
                 {
-                    TwitchUtility.ReinstateModRole(_TwitchAPI, GlobalObjects.TwitchBroadcasterUserId, senderUserId, senderUsername, TIMEOUTROULETTELENGTH);
+                    TwitchUtility.ReinstateModRole(_TwitchAPI, GlobalObjects.TwitchBroadcasterUserId, senderUserId, senderUsername, timeoutLength);
                 }).Start();
             }
         }
@@ -492,6 +487,8 @@ namespace TwitchBot
 
         void RouletteLeaderboardCommand(string parentMessageId)
         {
+            Dictionary<string, int>? rouletteLeaderboard;
+
             try
             {
                 //rouletteLeaderboard = GetRouletteLeaderboardFromJson();
@@ -503,6 +500,7 @@ namespace TwitchBot
             catch(Exception except)
             {
                 WPFUtility.WriteToLog($"RouletteLeaderboardCommand Error: {except.Message}");
+                return;
             }
 
             List<RouletteLeaderboardPosition> topLeaderboardSpots = GetTopRouletteLeaderboardPositions(rouletteLeaderboard);
@@ -556,7 +554,7 @@ namespace TwitchBot
         {
             List<RouletteLeaderboardPosition> topPositions = new List<RouletteLeaderboardPosition>();
 
-            var topGroups = rouletteLeaderboard.OrderByDescending(x => x.Value).GroupBy(x => x.Value).Take(TIMEOUTROULETTETOPPOSITIONSTODISPLAY);
+            var topGroups = leaderboard.OrderByDescending(x => x.Value).GroupBy(x => x.Value).Take(TIMEOUTROULETTETOPPOSITIONSTODISPLAY);
 
             foreach (var topGroup in topGroups)
             {
@@ -747,7 +745,7 @@ namespace TwitchBot
             }
         }
 
-        public void SaveRouletteLeaderboardToJson()
+        public void SaveRouletteLeaderboardToJson(Dictionary<string, int>? rouletteLeaderboard)
         {
             try
             {

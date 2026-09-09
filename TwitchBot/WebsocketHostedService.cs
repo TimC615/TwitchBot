@@ -297,6 +297,19 @@ namespace TwitchBot
             if (chatMessageBody.SourceBroadcasterUserId != null && chatMessageBody.SourceBroadcasterUserId != GlobalObjects.TwitchBroadcasterUserId)
                 return;
 
+
+            /*
+            Tests in regards to a theoretical custom twitch chat. Would therefor need to worry about emotes and badges (less so)
+
+            var badgeTest = await _TwitchAPI.Helix.Chat.GetGlobalChatBadgesAsync();
+            string badgeImgUrl = badgeTest.EmoteSet[0].Versions[0].ImageUrl1x;
+
+            var emoteTest = await _TwitchAPI.Helix.Chat.GetGlobalEmotesAsync();
+            string emoteImgUrl = emoteTest.GlobalEmotes[0].Images.Url1X;
+            */
+
+
+
             //incoming message is a command
             if (chatMessageBody.Message.Text.StartsWith("!"))
             {

@@ -96,11 +96,22 @@ using static System.Formats.Asn1.AsnWriter;
 //probably will either need to use a rich text box or use a stackpanel with a new textbox added for each new entry to force different background/bolding for each new textbox
 
 
-//points redeem to make all other bot points rewards 50% off
-//maybe make all bot redeems 1 point instead
-//either time-based or total number of redeems based
+//convert things to be more scalable
+//e.g. turning on/off buttons for creating bot-controlled points rewards 
+
+//e.g. get method to select all xaml elements with specific class ("enable-with-bot" or something)
+//  - makes it so when future menu or full sized buttons are added I don't need to remember to add them to a list
 
 
+
+//really cool custom chat idea
+//https://youtu.be/JbM2tCGG2WA?si=rNygD-Mf-2BJem5L
+//would require posting chat messages to local website which obs would then pull and read from
+//either manually forced on/off between normal chat and the funky custom chat
+
+
+
+//maybe make it so bot always shows in chat member list
 
 
 //--------IMPLEMENTED BUT NOT TESTED--------
@@ -110,6 +121,11 @@ using static System.Formats.Asn1.AsnWriter;
 //maybe a global catch for the bad oauth exception (if even possible)?
 //maybe just ugly version of checking with checker method before doing anything twitch-based
 //EITHER HAVE RUNNING IN THE BACKGROUND FOR A FEW HOURS OR WAIT FOR A NOT CHATTY STREAM TO TEST
+
+
+
+//look onto roulette timeout issue
+//spinning ~1000000 times, failing the first spin, and only being timed out for 30 seconds
 
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot

@@ -80,7 +80,7 @@ namespace TwitchBot.Utility_Code
             //added ExpiresIn case to allow for the code needing an access token to fully execute
             if (tokenResult == null || tokenResult.ExpiresIn <= secondsRemainingCheck)
             {
-                WPFUtility.WriteToLog("CheckAccessToken: Bad token, refreshing");
+                WPFUtility.WriteToLog("CheckAccessToken: Bad token, refreshing...");
 
                 try
                 {
@@ -194,7 +194,7 @@ namespace TwitchBot.Utility_Code
 
         static async public void ReinstateModRole(TwitchAPI _TwitchAPI, string TwitchChannelId, string userIdToMod, string username, int banLength)
         {
-            Thread.Sleep(banLength * 1000); //wait for user's timeout to finish (seconds)
+            Thread.Sleep(banLength * 1000); //wait for user's timeout to finish (converting from seconds to miliseconds)
 
             await TwitchUtility.CheckAccessToken();
 
@@ -238,18 +238,25 @@ namespace TwitchBot.Utility_Code
             if (sendMessageAsChatBot)
                 chatMessageRequest.ForSourceOnly = true;
 
-            SendChatMessageResponse sendMessageResponse = await _TwitchAPI.Helix.Chat.SendChatMessage(chatMessageRequest);
-
-            foreach (var respInfo in sendMessageResponse.Data)
+            try
             {
-                if (respInfo.IsSent)
+                SendChatMessageResponse sendMessageResponse = await _TwitchAPI.Helix.Chat.SendChatMessage(chatMessageRequest);
+
+                foreach (var respInfo in sendMessageResponse.Data)
                 {
-                    System.Console.WriteLine($"TwitchUtility.SendChatMessage \tMessId:{respInfo.MessageId}\tIsSent:{respInfo.IsSent}");
+                    if (respInfo.IsSent)
+                    {
+                        System.Console.WriteLine($"TwitchUtility.SendChatMessage \tMessId:{respInfo.MessageId}\tIsSent:{respInfo.IsSent}");
+                    }
+                    else
+                    {
+                        WPFUtility.WriteToLog($"TwitchUtility.SendChatMessage MESSAGE NOT SENT \ttDropCode:{respInfo.DropReason.Code}\tDropMessage{respInfo.DropReason.Message}\nBe sure to check if the bot has mod status or not in the channel this issue occurred in. Could fix the issue.");
+                    }
                 }
-                else
-                {
-                    WPFUtility.WriteToLog($"TwitchUtility.SendChatMessage MESSAGE NOT SENT \ttDropCode:{respInfo.DropReason.Code}\tDropMessage{respInfo.DropReason.Message}");
-                }
+            }
+            catch(Exception except)
+            {
+                WPFUtility.WriteToLog($"TwitchUtility.SendChatMessage ERROR \t{except.Message}");
             }
         }
 
