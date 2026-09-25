@@ -39,7 +39,24 @@ namespace TwitchBot.Utility_Code
         //Returns true if succeeded and false if an error occurred
         public static bool ResetPNGTuber()
         {
-            string currSceneName = GlobalObjects._OBS.GetCurrentProgramScene();
+            string currSceneName;
+
+            //If studio mode is enabled in obs, make the png move on the scene currently being broadcast
+            //If not, just update current (and only shown) scene
+
+            //This is necessary as updating the "Program" scene directly is not possible while in studio mode. If you indtead toggle OFF
+            //both the "Duplicate Scene" and "Swap Preview/Program Scenes After Transitioning" options, the below solution will
+            //correctly update the pngtuber source as, in this case, all changes made to "Preview" will be immideately shown in
+            //"Program" if they have both selected the exact same scene
+            if (GlobalObjects._OBS.GetStudioModeEnabled())
+            {
+                WPFUtility.WriteToLog($"Warning: OBS Studio mode is enabled. PNGTuber may not have been updated for broadcast output (\"Program\" window).");
+                currSceneName = GlobalObjects._OBS.GetCurrentPreviewScene();
+            }
+            else
+                currSceneName = GlobalObjects._OBS.GetCurrentProgramScene();
+
+
             try
             {
                 List<SceneItemDetails> sceneItemList = GlobalObjects._OBS.GetSceneItemList(currSceneName);
@@ -121,12 +138,29 @@ namespace TwitchBot.Utility_Code
         //Returns true if everything succeeded and false if an error occurred
         public static bool MovePNGTuber()
         {
-            string currSceneName = GlobalObjects._OBS.GetCurrentProgramScene();
+            string currSceneName;
+
+            //If studio mode is enabled in obs, make the png move on the scene currently being broadcast
+            //If not, just update current (and only shown) scene
+
+            //This is necessary as updating the "Program" scene directly is not possible while in studio mode. If you indtead toggle OFF
+            //both the "Duplicate Scene" and "Swap Preview/Program Scenes After Transitioning" options, the below solution will
+            //correctly update the pngtuber source as, in this case, all changes made to "Preview" will be immideately shown in
+            //"Program" if they have both selected the exact same scene
+            if (GlobalObjects._OBS.GetStudioModeEnabled())
+            {
+                WPFUtility.WriteToLog($"Warning: OBS Studio mode is enabled. PNGTuber may not have been updated for broadcast output (\"Program\" window).");
+                currSceneName = GlobalObjects._OBS.GetCurrentPreviewScene();
+            }
+            else
+                currSceneName = GlobalObjects._OBS.GetCurrentProgramScene();
+            
             try
             {
                 List<SceneItemDetails> sceneItemList = GlobalObjects._OBS.GetSceneItemList(currSceneName);
 
                 SceneItemDetails pngtuberSceneItem = sceneItemList.FirstOrDefault(sceneItem => sceneItem.SourceName == GlobalObjects.ObsPngTuberName);
+
 
                 if (pngtuberSceneItem == null)
                     throw new Exception("Unable to find talking head either due to not being present in current scene or due to incorrectly stored name in settings");

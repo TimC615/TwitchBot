@@ -91,9 +91,8 @@ using static System.Formats.Asn1.AsnWriter;
 
 //change wpf log text to make different entries more obvious
 //e.g. different colours for each entry (red, green, red, green, etc...) or bolding text (normal, bold, normal, bold, etc...)
-
-//Can't do this with a standard text box.
-//probably will either need to use a rich text box or use a stackpanel with a new textbox added for each new entry to force different background/bolding for each new textbox
+    //Can't do this with a standard text box.
+    //probably will either need to use a rich text box or use a stackpanel with a new textbox added for each new entry to force different background/bolding for each new textbox
 
 
 //convert things to be more scalable
@@ -114,6 +113,10 @@ using static System.Formats.Asn1.AsnWriter;
 //maybe make it so bot always shows in chat member list
 
 
+//flashbang points redeem?
+//prefereably something to pop up when even focused in a game
+
+
 //--------IMPLEMENTED BUT NOT TESTED--------
 
 //have more checks for invalid oauth token
@@ -123,9 +126,11 @@ using static System.Formats.Asn1.AsnWriter;
 //EITHER HAVE RUNNING IN THE BACKGROUND FOR A FEW HOURS OR WAIT FOR A NOT CHATTY STREAM TO TEST
 
 
-
 //look onto roulette timeout issue
 //spinning ~1000000 times, failing the first spin, and only being timed out for 30 seconds
+
+
+
 
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot
@@ -197,6 +202,9 @@ namespace TwitchBot
             private set;
         }
 
+
+
+        
         public MainWindow()
         {
             InitializeComponent();
