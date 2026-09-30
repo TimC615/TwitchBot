@@ -2,6 +2,7 @@
 using OBSWebsocketDotNet.Types;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -17,6 +18,8 @@ using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomRewardRedemptionStatu
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateRedemptionStatus;
 using TwitchLib.Api.Helix.Models.Channels.SendChatMessage;
 using TwitchLib.Api.Helix.Models.Moderation.GetModerators;
+using TwitchLib.Api.Helix.Models.Polls.CreatePoll;
+using TwitchLib.Api.Helix.Models.Predictions.CreatePrediction;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Core.Models;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
@@ -338,6 +341,59 @@ namespace TwitchBot.Utility_Code
             {
                 WPFUtility.WriteToLog($"ResetPointsRedeemCosts error: {except.Message}");
             }
+        }
+
+        static int test()
+        {
+            return 5;
+        }
+
+        //have to format this method as a task as otherwise I am unable to return a bool if method is also async
+        static async public Task<bool> CreatePrediction(string predictionQuestion, List<string> choices, string broadcasterUserId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(predictionQuestion))
+                    throw new Exception("Nothing provided for prediction title");
+
+
+                CreatePredictionRequest request = new CreatePredictionRequest();
+                request.Title = predictionQuestion;
+                request.PredictionWindowSeconds = 120;
+                request.BroadcasterId = broadcasterUserId;
+
+
+                //change between a list of strings for the choices to a list of "Outcome" type
+                int totalChoices = choices.Count;
+                List<Outcome> outcomes = new List<Outcome>();
+
+                for (int x = 0; x < choices.Count; x++)
+                {
+                    WPFUtility.WriteToLog($"Choice: {choices[x]}");
+
+                    Outcome newOutcome = new Outcome();
+                    newOutcome.Title = choices[x];
+                    outcomes.Add(newOutcome);
+                }
+
+                
+                if (outcomes.Count < 2)
+                    throw new Exception("Too few choices to create a prediction");
+                if (outcomes.Count > 5)
+                    throw new Exception("Too many choices to create a prediction");
+
+
+                request.Outcomes = outcomes.ToArray();
+
+                await GlobalObjects._TwitchAPI.Helix.Predictions.CreatePredictionAsync(request);
+            }
+            catch(Exception except)
+            {
+                WPFUtility.WriteToLog($"Error creating prediction: ");
+                return false;
+            }
+
+            return true;
         }
     }
 }

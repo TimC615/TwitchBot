@@ -47,7 +47,7 @@
                     <MenuItem Name="ShowRouletteSuccess" Header="_Display Roulette Success Message" HorizontalAlignment="Left" IsEnabled="False" IsCheckable="True" Checked="ShowRouletteSuccessMenuItem_Checked" Unchecked="ShowRouletteSuccessMenuItem_Unchecked"/>
                 </MenuItem>
 
-                <MenuItem Header="_Advanced">
+                <MenuItem Header="_Advanced" Name="AdvancedDropDown">
                     <MenuItem Name="CheckCurrentAccessToken" Header="_Check Access Token" HorizontalAlignment="Left" IsEnabled="False" Click="CheckAccessTokenMenuItem_Click"/>
                     <Separator></Separator>
                     <MenuItem Name="RecreateTTSNormalRate" Header="_Recreate TTS (Normal Rate) Points Reward" HorizontalAlignment="Left" IsEnabled="False" Click="RecreateTTSNormalRateRewardMenuItem_Click"/>
@@ -56,6 +56,7 @@
                     <MenuItem Name="RecreateResetPNGMeReward" Header="_Recreate Reset PNG-Me Points Reward" HorizontalAlignment="Left" IsEnabled="False" Click="RecreateResetPNGMeRewardMenuItem_Click"/>
                     <MenuItem Name="RecreateToggleCakeFaceReward" Header="_Recreate Toggle Cake Face Points Reward" HorizontalAlignment="Left" IsEnabled="False" Click="RecreateToggleCakeFaceRewardMenuItem_Click"/>
                     <MenuItem Name="RecreateDiscountedRedeemsReward" Header="_Recreate Discounted Redeems Points Reward" HorizontalAlignment="Left" IsEnabled="False" Click="RecreateDiscountedRedeemsRewardMenuItem_Click"/>
+                    <MenuItem Name="RecreateCreatePredictionReward" Header="_Recreate Create Prediction Points Reward" HorizontalAlignment="Left" IsEnabled="False" Click="RecreateCreatePredictionRewardMenuItem_Click"/>
                 </MenuItem>
             </Menu>
             <!--            End of menu bar items           -->

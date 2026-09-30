@@ -17,6 +17,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Threading;
 using TwitchBot.Utility_Code;
 using TwitchLib.Api;
@@ -91,8 +92,8 @@ using static System.Formats.Asn1.AsnWriter;
 
 //change wpf log text to make different entries more obvious
 //e.g. different colours for each entry (red, green, red, green, etc...) or bolding text (normal, bold, normal, bold, etc...)
-    //Can't do this with a standard text box.
-    //probably will either need to use a rich text box or use a stackpanel with a new textbox added for each new entry to force different background/bolding for each new textbox
+//Can't do this with a standard text box.
+//probably will either need to use a rich text box or use a stackpanel with a new textbox added for each new entry to force different background/bolding for each new textbox
 
 
 //convert things to be more scalable
@@ -116,6 +117,9 @@ using static System.Formats.Asn1.AsnWriter;
 //flashbang points redeem?
 //prefereably something to pop up when even focused in a game
 
+
+//similar to https://youtu.be/pOri2YsWfMo?si=oa-ZvUnq01lwL76K, maybe make it so predictions are read out when created
+//either that or just a little sound effect to signify "hey a prediction is here"
 
 //--------IMPLEMENTED BUT NOT TESTED--------
 
@@ -170,7 +174,7 @@ namespace TwitchBot
             "channel:bot",
             "channel:moderate", "channel:read:subscriptions",  "channel:manage:redemptions", "channel:read:ads", "channel:manage:moderators",
             "moderation:read", "moderator:manage:banned_users",
-            "user:read:chat"
+            "user:read:chat", "channel:manage:predictions"
         };      //find more Twitch API scopes at https://dev.twitch.tv/docs/authentication/scopes/
 
         //WPF
@@ -376,6 +380,9 @@ namespace TwitchBot
             Properties.Settings.Default.Save();
         }
 
+
+        //-------Points Redeemption Builders-------
+
         private void RecreateTTSNormalRateRewardMenuItem_Click(object sender, RoutedEventArgs e)
         {
             WPFUtility.WriteToLog($"Recreating TTS (Normal Speech Rate) points redeem...");
@@ -464,6 +471,27 @@ namespace TwitchBot
             TwitchUtility.RecreateCustomPointsReward(createReward);
         }
 
+        private void RecreateCreatePredictionRewardMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            WPFUtility.WriteToLog($"Recreating Create Poll points redeem...");
+
+            CreateCustomRewardsRequest createReward = new CreateCustomRewardsRequest();
+            createReward.Title = "Create a Prediction";
+            createReward.Cost = 500;
+            createReward.BackgroundColor = "#A1849E";
+            createReward.Prompt = "Create a custom poll for whatever you want. Please enter your prediction in the format of \"[prompt] [choice 1] [choice 2] etc... | " +
+                "You have to include the square brackets in your response and you can have between 2 and 5 total choices. ";
+            createReward.IsGlobalCooldownEnabled = true;
+            createReward.GlobalCooldownSeconds = 20;
+            createReward.IsEnabled = true;
+            createReward.IsUserInputRequired = true;
+
+            TwitchUtility.RecreateCustomPointsReward(createReward);
+        }
+
+
+
+
 
         private void CloseMenuItem_Click(object sender, RoutedEventArgs e)
         {
@@ -499,12 +527,15 @@ namespace TwitchBot
 
         async private void TestButton_Click(object sender, RoutedEventArgs e)
         {
-            UpdateCustomRewardRequest updateReward = new UpdateCustomRewardRequest();
-            updateReward.IsPaused = false;
-
-            string rewardId = "";
-
-            await GlobalObjects._TwitchAPI.Helix.ChannelPoints.UpdateCustomRewardAsync(GlobalObjects.TwitchBroadcasterUserId, rewardId, updateReward);
+            //iterate through all buttons in specifically the "advanced" menu dropdown
+            foreach (var dropdownItem in AdvancedDropDown.Items)
+            {
+                //retrieves only menu items (ignores things like seperators)
+                if (dropdownItem is MenuItem menuItem)
+                {
+                    WPFUtility.WriteToLog($"{menuItem.Name.ToString()}");
+                }
+            }
         }
 
         async private void TestModButton_Click(object sender, RoutedEventArgs e)
@@ -738,12 +769,7 @@ namespace TwitchBot
             else
                 ShowRouletteSuccess.IsChecked = false;
 
-            RecreateTTSNormalRate.IsEnabled = true;
-            RecreateTTSRandomRate.IsEnabled = true;
-            RecreateMovePNGMeReward.IsEnabled = true;
-            RecreateResetPNGMeReward.IsEnabled = true;
-            RecreateToggleCakeFaceReward.IsEnabled = true;
-            RecreateDiscountedRedeemsReward.IsEnabled = true;
+            WPFUtility.TogglePointsRewardMenuItemBuilders(AdvancedDropDown, true);
         }
 
         async void InitializeWebServer()
@@ -1123,12 +1149,7 @@ namespace TwitchBot
             ShowRouletteSuccess.IsEnabled = false;
             NinjaApiSilenceTTS.IsEnabled = false;
 
-            RecreateTTSNormalRate.IsEnabled = false;
-            RecreateTTSRandomRate.IsEnabled = false;
-            RecreateMovePNGMeReward.IsEnabled = false;
-            RecreateResetPNGMeReward.IsEnabled = false;
-            RecreateToggleCakeFaceReward.IsEnabled = false;
-            RecreateDiscountedRedeemsReward.IsEnabled = false;
+            WPFUtility.TogglePointsRewardMenuItemBuilders(AdvancedDropDown, false);
 
             TestButton.IsEnabled = false;
         }

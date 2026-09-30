@@ -2,19 +2,24 @@
 using OBSWebsocketDotNet.Types;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Windows.Shapes;
 using TwitchBot.Utility_Code;
 using TwitchLib.Api.Helix.Models.ChannelPoints.GetCustomReward;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomReward;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomRewardRedemptionStatus;
 using TwitchLib.Api.Helix.Models.Channels.GetChannelInformation;
+using TwitchLib.Api.Helix.Models.Polls.CreatePoll;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 using TwitchLib.EventSub.Websockets.Core.EventArgs;
 using TwitchLib.PubSub.Events;
+using TwitchLib.PubSub.Models.Responses.Messages.Redemption;
 
 namespace TwitchBot
 {
@@ -70,7 +75,7 @@ namespace TwitchBot
             //Log("PubSub: " + e.RewardRedeemed.Redemption.Reward.Title);
             var pointsRedemption = e.Payload.Event;
             string redeemTitle = pointsRedemption.Reward.Title.ToLower();
-            WPFUtility.WriteToLog("Points Reward: " + redeemTitle);
+            WPFUtility.WriteToLog($"{e.Payload.Event.UserName} triggered points reward: " + redeemTitle);
 
             //not guarenteed all points redeems requires API key to be valid but probably easier to force a check in case I forget to add a check to a future redeem
             await TwitchUtility.CheckAccessToken();
@@ -106,6 +111,12 @@ namespace TwitchBot
 
                 case "discounted bot redemptions":
                     DiscountedRedemptions(pointsRedemption);
+                    break;
+
+                case "create a prediction":
+                    //inspiration for this feature: DougDougDoug's "I let Twitch Chat gamble on my personal life"
+                    //https://youtu.be/pOri2YsWfMo?si=JCg1vKSUk8DioHcw
+                    CreatePrediction(pointsRedemption);
                     break;
             }
         }
@@ -345,7 +356,7 @@ namespace TwitchBot
             }
         }
 
-        async private static void DiscountedRedemptions(ChannelPointsCustomRewardRedemption e)
+        async static private void DiscountedRedemptions(ChannelPointsCustomRewardRedemption e)
         {
             GetCustomRewardsResponse botMadeRewards;
 
@@ -404,6 +415,90 @@ namespace TwitchBot
                 TwitchUtility.ResetPointsRedeemCosts(rewardsToReset);
             }).Start();
             
+        }
+
+        async static private void CreatePrediction(ChannelPointsCustomRewardRedemption e)
+        {
+            bool validEntry = true;
+            List<string> splitInput = new List<string>();
+            Regex regexPattern = new Regex(@"\[(.*?)\]");
+
+            //use regex to match substrings contained within "[]". afterwards, trim out those square brackets to only have the containing user text remaining
+            foreach(Match match in regexPattern.Matches(e.UserInput))
+            {
+                WPFUtility.WriteToLog($"Entry: {match.Value}");
+
+
+                char[] entryTrimChars = { '[', ']' };
+                string cleanedEntry = match.Value.Trim(entryTrimChars);
+
+                if(!string.IsNullOrEmpty(cleanedEntry))
+                    splitInput.Add(cleanedEntry);
+            }
+
+            UpdateCustomRewardRedemptionStatusRequest rewardRedemptionStatus = new UpdateCustomRewardRedemptionStatusRequest();
+
+
+            try
+            {
+                //prediction does not have a title
+                if (splitInput.Count == 0 || string.IsNullOrEmpty(splitInput[0]))
+                {
+                    string responseMessage = "You didn't give the prediction a title. Make sure that the title is set to at least 1 character.";
+                    TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, responseMessage, sendMessageAsChatBot: true);
+                    throw new Exception("No title provided for prediction");
+                }
+
+
+                //not enough entries to cover the minimum of 1 title and 2 choices
+                if (splitInput.Count < 3)
+                {
+                    string responseMessage = "You haven't provided enough choices for the poll. You have to give at least 2 options to vote on.";
+                    TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, responseMessage, sendMessageAsChatBot: true);
+                    throw new Exception("Not enough choices provided for the current prediction");
+                }
+
+                //too many entries relative to the max of 1 title and 5 choices. some user input info would be ignored
+                if (splitInput.Count > 6)
+                {
+                    string responseMessage = "You have provided too many choices for the poll. The maximum choices you can give is 5.";
+                    TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, responseMessage, sendMessageAsChatBot: true);
+                    throw new Exception("Too many choices provided for the current prediction");
+                }
+
+
+                int lastIndexOfInputList = splitInput.Count;
+                bool createPollSuccess;
+
+                //immediately run task to trigger prediction creation method and automatically assign result bool to createPollSuccess
+                createPollSuccess = await Task.Run(() => TwitchUtility.CreatePrediction(splitInput[0], splitInput[1..lastIndexOfInputList], e.BroadcasterUserId));
+
+                //use this for automatically redeeming someone's points if action doesn't complete successfully
+                if (createPollSuccess)
+                    rewardRedemptionStatus.Status = TwitchLib.Api.Core.Enums.CustomRewardRedemptionStatus.FULFILLED;
+                else
+                    rewardRedemptionStatus.Status = TwitchLib.Api.Core.Enums.CustomRewardRedemptionStatus.CANCELED;
+
+            }
+            catch (Exception except)
+            {
+                WPFUtility.WriteToLog($"Error in TwitchPointsRedeems.CreatePrediction(): {except.Message}");
+                rewardRedemptionStatus.Status = TwitchLib.Api.Core.Enums.CustomRewardRedemptionStatus.CANCELED;
+            }
+
+            try
+            {
+                TwitchUtility.UpdateCustomPointRedemptionStatus(
+                e.BroadcasterUserId,
+                e.Reward.Id,
+                new List<string> { e.Id },
+                rewardRedemptionStatus);
+            }
+            catch(Exception except)
+            {
+                WPFUtility.WriteToLog($"Error updating redemption status in TwitchPointsRedeems.CreatePrediction(): {except.Message}");
+                return;
+            }
         }
     }
 }

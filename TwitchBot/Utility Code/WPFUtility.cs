@@ -6,6 +6,8 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
+
 //using System.Windows.Forms;
 using System.Windows.Threading;
 //using static System.Windows.Forms.VisualStyles.VisualStyleElement;
@@ -36,6 +38,19 @@ namespace TwitchBot.Utility_Code
             catch (Exception ex)
             {
                 Trace.WriteLine($"WPFUtility Error - {ex.ToString()}");
+            }
+        }
+
+
+        public static void TogglePointsRewardMenuItemBuilders(MenuItem parentMenuItem, bool toggleOn)
+        {
+            foreach (var dropdownItem in parentMenuItem.Items)
+            {
+                //retrieves only menu items (ignores things like seperators)
+                if (dropdownItem is MenuItem menuItem)
+                {
+                    menuItem.IsEnabled = toggleOn;
+                }
             }
         }
     }
