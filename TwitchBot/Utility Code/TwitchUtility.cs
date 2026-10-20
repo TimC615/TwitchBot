@@ -16,10 +16,13 @@ using TwitchLib.Api.Helix.Models.ChannelPoints.GetCustomReward;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomReward;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomRewardRedemptionStatus;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateRedemptionStatus;
+using TwitchLib.Api.Helix.Models.Channels.GetChannelInformation;
 using TwitchLib.Api.Helix.Models.Channels.SendChatMessage;
 using TwitchLib.Api.Helix.Models.Moderation.GetModerators;
 using TwitchLib.Api.Helix.Models.Polls.CreatePoll;
 using TwitchLib.Api.Helix.Models.Predictions.CreatePrediction;
+using TwitchLib.Api.Helix.Models.Streams.GetStreams;
+using TwitchLib.Api.Helix.Models.Users.GetUsers;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Core.Models;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
@@ -394,6 +397,19 @@ namespace TwitchBot.Utility_Code
             }
 
             return true;
+        }
+
+        static async public void RaidResponse(TwitchLib.EventSub.Core.SubscriptionTypes.Channel.ChannelRaid e)
+        {
+            WPFUtility.WriteToLog($"User {e.FromBroadcasterUserName} just raided into user {e.ToBroadcasterUserName} with {e.Viewers} viewers");
+
+            //have to poll Twitch API for channel info as there is no other way to be able to get the last category (game name) the user was in (assuming the user is now offline)
+            GetChannelInformationResponse channelInfoResp = await GlobalObjects._TwitchAPI.Helix.Channels.GetChannelInformationAsync(new List<string> { $"{e.FromBroadcasterUserId}" });
+
+            string raidMessage = $"Oh hey! {e.FromBroadcasterUserName} just raided in with {e.Viewers} viewers! They were last playing {channelInfoResp.Data[0].GameName}.";
+            TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, raidMessage, sendMessageAsChatBot: true);
+
+            await GlobalObjects._TwitchAPI.Helix.Chat.SendShoutoutAsync(GlobalObjects.TwitchBroadcasterUserId, e.FromBroadcasterUserId, GlobalObjects.TwitchBroadcasterUserId);
         }
     }
 }

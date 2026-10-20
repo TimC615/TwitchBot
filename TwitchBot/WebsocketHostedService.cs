@@ -71,6 +71,9 @@ namespace TwitchBot
             _eventSubWebsocketClient.ChannelChatMessage += OnMessageReceived;
             _eventSubWebsocketClient.ChannelPointsCustomRewardRedemptionAdd += OnChannelPointsCustomRewardRedemptionAdd;
             _eventSubWebsocketClient.ChannelAdBreakBegin += OnChannelAdBreakBegin;
+            _eventSubWebsocketClient.ChannelPredictionBegin += OnChannelPredictionBegin;
+            _eventSubWebsocketClient.ChannelPredictionEnd += OnChannelPredictionEnd;
+            _eventSubWebsocketClient.ChannelRaid += OnChannelRaid;
             //_eventSubWebsocketClient.ChannelFollow += OnChannelFollow;
 
         }
@@ -281,6 +284,32 @@ namespace TwitchBot
 
                 _logger.LogInformation($"EventSub: Ad break started at {e.Payload.Event.StartedAt} for {e.Payload.Event.DurationSeconds} seconds");
         }
+
+        private async Task OnChannelPredictionBegin(object? sender, ChannelPredictionBeginArgs e)
+        {
+            //lock ability to create new predictions through chat commands
+
+
+            _logger.LogInformation($"EventSub: Prediction for \"{e.Payload.Event.Title}\" began at {e.Payload.Event.StartedAt.DateTime.TimeOfDay}");
+        }
+
+        private async Task OnChannelPredictionEnd(object? sender, ChannelPredictionEndArgs e)
+        {
+            //restore ability to create new predictions through chat commands
+
+
+            _logger.LogInformation($"EventSub: Prediction for \"{e.Payload.Event.Title}\" was {e.Payload.Event.Status} at {e.Payload.Event.EndedAt.DateTime.TimeOfDay}");
+        }
+
+        private async Task OnChannelRaid(object? sender, ChannelRaidArgs e)
+        {
+            _logger.LogInformation($"{e.Payload.Event.FromBroadcasterUserName} raided into {e.Payload.Event.ToBroadcasterUserName}");
+            
+            new Thread(delegate () {
+                TwitchUtility.RaidResponse(e.Payload.Event);
+            }).Start();
+        }
+
 
         //!!! might need to make multiple threads to act on multiple chat messages simultaniously !!!
         //potentially add in a rate limit to smooth out commands (better for larger, more constant input volumes)

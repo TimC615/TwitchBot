@@ -27,13 +27,16 @@ using TwitchLib.Api.Helix.Models.ChannelPoints;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
 using TwitchLib.Api.Helix.Models.ChannelPoints.GetCustomReward;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomReward;
+using TwitchLib.Api.Helix.Models.Channels.GetChannelInformation;
 using TwitchLib.Api.Helix.Models.Channels.SendChatMessage;
 using TwitchLib.Api.Helix.Models.EventSub;
 using TwitchLib.Api.Helix.Models.Moderation.BanUser;
 using TwitchLib.Api.Helix.Models.Moderation.GetBannedUsers;
 using TwitchLib.Api.Helix.Models.Moderation.GetModerators;
 using TwitchLib.Api.Helix.Models.Streams.CreateStreamMarker;
+using TwitchLib.Api.Helix.Models.Streams.GetStreams;
 using TwitchLib.Api.Helix.Models.Users.GetUsers;
+using TwitchLib.Api.Helix.Models.Videos.GetVideos;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
@@ -121,6 +124,16 @@ using static System.Formats.Asn1.AsnWriter;
 //similar to https://youtu.be/pOri2YsWfMo?si=oa-ZvUnq01lwL76K, maybe make it so predictions are read out when created
 //either that or just a little sound effect to signify "hey a prediction is here"
 
+
+
+//pause create prediction redeem if one is currently active? (I assume you can only have 1 going at any one time)
+
+//if an error occurs and a prediction could not be completed, (if possible) skip the cooldown for the points redeem that was activated
+
+
+//look into if twitch has an api event linked to the "ads in xx:xx countdown"
+
+
 //--------IMPLEMENTED BUT NOT TESTED--------
 
 //have more checks for invalid oauth token
@@ -130,10 +143,9 @@ using static System.Formats.Asn1.AsnWriter;
 //EITHER HAVE RUNNING IN THE BACKGROUND FOR A FEW HOURS OR WAIT FOR A NOT CHATTY STREAM TO TEST
 
 
-//look onto roulette timeout issue
-//spinning ~1000000 times, failing the first spin, and only being timed out for 30 seconds
 
-
+//possibly transition from frosty tools handling raids to instead be through the bot
+//would need a little "xyz had raided" message (w/ what they were doing?) and an automatic shoutout for the streamer
 
 
 //---------------------------------------------------------------------------------------------------------------------------
@@ -527,6 +539,7 @@ namespace TwitchBot
 
         async private void TestButton_Click(object sender, RoutedEventArgs e)
         {
+            /*
             //iterate through all buttons in specifically the "advanced" menu dropdown
             foreach (var dropdownItem in AdvancedDropDown.Items)
             {
@@ -536,6 +549,14 @@ namespace TwitchBot
                     WPFUtility.WriteToLog($"{menuItem.Name.ToString()}");
                 }
             }
+            */
+            GetStreamsResponse streamsResp = await GlobalObjects._TwitchAPI.Helix.Streams.GetStreamsAsync(userIds: new List<string> { $"{GlobalObjects.TwitchBroadcasterUserId}" });
+
+            GetVideosResponse videoResp = await GlobalObjects._TwitchAPI.Helix.Videos.GetVideosAsync(userId: GlobalObjects.TwitchBroadcasterUserId);
+
+            GetChannelInformationResponse channelInfoResp = await GlobalObjects._TwitchAPI.Helix.Channels.GetChannelInformationAsync(broadcasterIds: new List<string> { $"{GlobalObjects.TwitchBroadcasterUserId}" });
+
+            WPFUtility.WriteToLog(channelInfoResp.Data[0].GameName);
         }
 
         async private void TestModButton_Click(object sender, RoutedEventArgs e)
