@@ -27,8 +27,10 @@ using TwitchLib.Api.Helix.Models.ChannelPoints;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
 using TwitchLib.Api.Helix.Models.ChannelPoints.GetCustomReward;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomReward;
+using TwitchLib.Api.Helix.Models.Channels.GetAdSchedule;
 using TwitchLib.Api.Helix.Models.Channels.GetChannelInformation;
 using TwitchLib.Api.Helix.Models.Channels.SendChatMessage;
+using TwitchLib.Api.Helix.Models.Channels.StartCommercial;
 using TwitchLib.Api.Helix.Models.EventSub;
 using TwitchLib.Api.Helix.Models.Moderation.BanUser;
 using TwitchLib.Api.Helix.Models.Moderation.GetBannedUsers;
@@ -42,6 +44,7 @@ using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
 using TwitchLib.PubSub.Models.Responses.Messages.Redemption;
 using static System.Formats.Asn1.AsnWriter;
+using static System.Net.Mime.MediaTypeNames;
 
 //Base functionality taken from HonestDanGames' Youtube channel https://youtu.be/Ufgq6_QhVKw?si=QYBbDl0sYVCy3QVF
 //Provides networking functionality to connect program to Twitch, beginner understanding of setting up API event handlers,
@@ -130,8 +133,15 @@ using static System.Formats.Asn1.AsnWriter;
 
 //if an error occurs and a prediction could not be completed, (if possible) skip the cooldown for the points redeem that was activated
 
+//get command for user to look up roulette score for either themself or another user
+
+
 
 //look into if twitch has an api event linked to the "ads in xx:xx countdown"
+    //make it so timer that triggers check method is always running
+    //idea: when warning is triggered, stop timer and only restart when next ad break is finished
+        //would then require taking out all the timer.stop() and timer.dispose() calls when error is encountered
+        //also make a call in the CloseEverything() method to stop and dispose of the current warning timer (wouldn't want it still checking if user has stopped bot but app is still running)
 
 
 //--------IMPLEMENTED BUT NOT TESTED--------
@@ -550,6 +560,9 @@ namespace TwitchBot
                 }
             }
             */
+
+
+            /*
             GetStreamsResponse streamsResp = await GlobalObjects._TwitchAPI.Helix.Streams.GetStreamsAsync(userIds: new List<string> { $"{GlobalObjects.TwitchBroadcasterUserId}" });
 
             GetVideosResponse videoResp = await GlobalObjects._TwitchAPI.Helix.Videos.GetVideosAsync(userId: GlobalObjects.TwitchBroadcasterUserId);
@@ -557,6 +570,61 @@ namespace TwitchBot
             GetChannelInformationResponse channelInfoResp = await GlobalObjects._TwitchAPI.Helix.Channels.GetChannelInformationAsync(broadcasterIds: new List<string> { $"{GlobalObjects.TwitchBroadcasterUserId}" });
 
             WPFUtility.WriteToLog(channelInfoResp.Data[0].GameName);
+            */
+
+
+            //have to check for when the next ad is scheduled to see if the ad break has been slept by 5 minutes since last check
+            //GetAdScheduleResponse adScheduleResp = await GlobalObjects._TwitchAPI.Helix.Channels.GetAdScheduleAsync(GlobalObjects.TwitchBroadcasterUserId);
+            //DateTimeOffset lastAdDateTime = DateTimeOffset.Parse(adScheduleResp.Data[0].LastAdAt);
+            //DateTimeOffset nextAdDateTime = DateTimeOffset.Parse(adScheduleResp.Data[0].NextAdAt);
+
+
+            DateTimeOffset currUtcDateTime = DateTimeOffset.UtcNow;
+
+            //An exception of type 'System.FormatException' occurred in System.Private.CoreLib.dll but was not handled in user code
+            //String '1792633301' was not recognized as a valid DateTime.
+
+
+
+
+            //DateTimeOffset nextAdDateTime = DateTimeOffset.UtcNow;
+            long nextAdScheduledMS = 1792633301;
+
+            Trace.WriteLine(DateTime.Now.ToString() + $"\tAdBreakWarning timer elapsed. Checking if time to next ad break is under {5} minutes");
+
+            WPFUtility.WriteToLog($"nextAdMS: {nextAdScheduledMS}\tcurrUtcMS: {currUtcDateTime.ToUnixTimeMilliseconds()}");
+
+            //long timeToAdBreak = nextAdDateTime.ToUnixTimeMilliseconds() - currUtcDateTime.ToUnixTimeMilliseconds();
+            //long timeToAdBreak = 1792633301 - currUtcDateTime.ToUnixTimeMilliseconds();
+
+            //TimeSpan testTimeSpan = nextAdDateTime - currUtcDateTime;
+            //WPFUtility.WriteToLog($"testTimeSpan TotalMS: {testTimeSpan.TotalMilliseconds}\tRounded: {(int)Math.Round(testTimeSpan.TotalMilliseconds)}");
+
+            long timeToAdBreak = nextAdScheduledMS - currUtcDateTime.ToUnixTimeSeconds();
+
+            WPFUtility.WriteToLog($"timeToAdBreak: {timeToAdBreak} = {nextAdScheduledMS}(nextAdScheduledMS) - {currUtcDateTime.ToUnixTimeSeconds()}(currUtcMS)");
+
+            int roundedMinutesToAdBreak = (int)Math.Round(timeToAdBreak / 60d);
+
+            WPFUtility.WriteToLog($"Heads up, there is a scheduled ad break in roughly {roundedMinutesToAdBreak} minutes");
+
+
+            /*
+            try
+            {
+                GetAdScheduleResponse adScheduleResp = await GlobalObjects._TwitchAPI.Helix.Channels.GetAdScheduleAsync(GlobalObjects.TwitchBroadcasterUserId);
+
+                WPFUtility.WriteToLog($"{adScheduleResp.Data.Length}");
+
+                WPFUtility.WriteToLog($"TEST");
+            }
+            catch (Exception except)
+            {
+                WPFUtility.WriteToLog($"Error in test button method: {except.Message}");
+            }
+            */
+
+            //TwitchUtility.InitializeAdBreakWarningTimer();
         }
 
         async private void TestModButton_Click(object sender, RoutedEventArgs e)
@@ -808,6 +876,8 @@ namespace TwitchBot
             {
                 using (var writer = new StreamWriter(e.Response.OutputStream))
                 {
+                    //all prerequisites met. finish initializing up bot
+                    //also probably best place to initialize other connections (e.g. OBS websocket)
                     if (e.Request.QueryString.AllKeys.Any("code".Contains))
                     {
                         //initialize base TwitchLib API
@@ -826,6 +896,8 @@ namespace TwitchBot
                         GlobalObjects._TwitchChatCommands = new TwitchChatCommands(_TwitchAPI, _SpeechSynth, NinjaAPIConnection);
 
                         InitializeMessagingBot();
+
+                        TwitchUtility.InitializeAdBreakWarningTimer();
                     }
                 }
             };
@@ -1208,6 +1280,8 @@ namespace TwitchBot
             {
                 _SpeechSynth.ClearAllSpeechSynthAsyncPrompts();
             }
+
+            TwitchUtility.StopAdWarningTimer();
 
             GlobalObjects.botIsActive = false;
 

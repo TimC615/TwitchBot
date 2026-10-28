@@ -20,15 +20,14 @@ namespace TwitchBot
     /// </summary>
     public partial class Settings : Window
     {
-        bool isTwitchAPIClientIDSet = true;
-        bool isTwitchAPIClientSecretSet = true;
-
         public Settings()
         {
             InitializeComponent();
 
             TwitchAPIClientIDTextBox.Text = Properties.Settings.Default.clientid;
             TwitchAPIClientSecretTextBox.Text = Properties.Settings.Default.clientsecret;
+
+            TwitchAdBreakWarningMinutesTextBox.Text = Properties.Settings.Default.WarningMinutesBeforeTwitchAdBreak.ToString();
 
             OBSWebSocketAuthTextBox.Text = Properties.Settings.Default.OBSWebSocketAuth;
             OBSWebSocketServerIPTextBox.Text = Properties.Settings.Default.OBSServerIP;
@@ -42,6 +41,10 @@ namespace TwitchBot
 
         private void SaveChangesButton_OnClick(object sender, RoutedEventArgs e)
         {
+            bool isTwitchAPIClientIDSet = true;
+            bool isTwitchAPIClientSecretSet = true;
+            bool isAdBreakWarningMinutesSetCorrectly = true;
+
             //ensures that the aplication will at least connect to Twitch successfully when running application
             if (TwitchAPIClientIDTextBox.Text == "")
             {
@@ -68,11 +71,36 @@ namespace TwitchBot
                 TwitchAPIClientSecretErrorMessage.Visibility = Visibility.Collapsed;
                 isTwitchAPIClientSecretSet = true;
             }
+
+            if (double.TryParse(TwitchAdBreakWarningMinutesTextBox.Text, out double parsedWarningMinutes))
+            {
+                if(parsedWarningMinutes >= -1 && parsedWarningMinutes <= 10)
+                {
+                    TwitchAdBreakWarningMinutesErrorMessage.IsEnabled = false;
+                    TwitchAdBreakWarningMinutesErrorMessage.Visibility = Visibility.Collapsed;
+                    isAdBreakWarningMinutesSetCorrectly = true;
+                }
+                else
+                {
+                    TwitchAdBreakWarningMinutesErrorMessage.IsEnabled = true;
+                    TwitchAdBreakWarningMinutesErrorMessage.Visibility = Visibility.Visible;
+                    isAdBreakWarningMinutesSetCorrectly = false;
+                }
+            }
+            else
+            {
+                TwitchAdBreakWarningMinutesErrorMessage.IsEnabled = true;
+                TwitchAdBreakWarningMinutesErrorMessage.Visibility = Visibility.Visible;
+                isAdBreakWarningMinutesSetCorrectly = false;
+            }
+
             
-            if(isTwitchAPIClientIDSet && isTwitchAPIClientSecretSet)
+            if(isTwitchAPIClientIDSet && isTwitchAPIClientSecretSet && isAdBreakWarningMinutesSetCorrectly)
             {
                 Properties.Settings.Default.clientid = TwitchAPIClientIDTextBox.Text;
                 Properties.Settings.Default.clientsecret = TwitchAPIClientSecretTextBox.Text;
+
+                Properties.Settings.Default.WarningMinutesBeforeTwitchAdBreak = double.Parse(TwitchAdBreakWarningMinutesTextBox.Text);
 
                 Properties.Settings.Default.OBSServerIP = OBSWebSocketServerIPTextBox.Text;
                 Properties.Settings.Default.OBSServerPort = OBSWebSocketServerPortTextBox.Text;

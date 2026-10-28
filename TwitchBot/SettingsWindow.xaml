@@ -25,6 +25,19 @@
 
                 <Separator Margin="10,5,10,5" Width="Auto"/>
 
+                <Expander Name="TwitchAdditionalExpander" Height="Auto" Header="Twitch Additional" HorizontalAlignment="Left">
+                    <StackPanel Orientation="Vertical" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0">
+                        <StackPanel Orientation="Horizontal" Margin="30,0,0,0">
+                            <Label Content="Minutes Before Ad Break To Send Warning Message:" VerticalAlignment="Center"/>
+                            <TextBox Name="TwitchAdBreakWarningMinutesTextBox" TextWrapping="Wrap" Text="0.0" Width="50" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <Label Name="TwitchAdBreakWarningMinutesErrorMessage" Content="The minutes value must be a double in the range of -1.0 and 10.0" Foreground="Red" IsEnabled="False" Visibility="Collapsed"/>
+                    </StackPanel>
+                </Expander>
+
+                <Separator Margin="10,5,10,5" Width="Auto"/>
+                
+
                 <Expander Name="OBSWebsocketExpander" Height="Auto" Header="OBS WebSocket" HorizontalAlignment="Left">
                     <StackPanel Orientation="Vertical" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="30,0,0,0">

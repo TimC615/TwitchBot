@@ -132,7 +132,7 @@ namespace TwitchBot
                     new Thread(APINinjaGetDadJoke).Start();
                 }
 
-                //Random chance for user to time themself out. If user has roles, automatically re-apply once timeout is done
+                //Random chance for user to time themself out. If user has roles (i.e. VIP or mod), automatically re-apply once timeout is done
                 if (cleanedCommandName.Equals("roulette"))
                 {
                     //Spin the wheel once (no specified spin number from user so use default)
@@ -166,23 +166,32 @@ namespace TwitchBot
                     RouletteLeaderboardCommand(e.MessageId);
                 }
 
+                //displays a list of the users with the highest recorded number of redeems of the 1st points reward
                 if(cleanedCommandName.Equals("firstleaderboard") || cleanedCommandName.Equals("1stleaderboard"))
                 {
                     FirstLeaderboardCommand(e.MessageId);
                 }
 
+                //lets users look at the total number of times they or someone else has redeemed 1st
+                //input is either "!1st"/"!first" or "!1st name"/"!first name"
                 if (cleanedCommandName.Equals("first") || cleanedCommandName.Equals("1st"))
                 {
+                    //if no other input is registered, defaults to looking up the score of the user who sent the command
                     if(messageInputs.Length == 1)
                         FirstCommand(e.ChatterUserId, e.ChatterUserName, e.MessageId);
+                    //other input found. using that input as the user score to lookup
                     else {
                         try
                         {
+                            //cleaning up numm/empty input
                             if (string.IsNullOrEmpty(messageInputs[1]))
                                 throw new Exception($"User tried to search for a user with a null or empty string");
 
+                            //ask Twitch API if the string the user input is a valid user
+                            //forces user input to all lowercase as that always fits username parameter. display name parameter allows users to instead capitalize whatever they want
                             GetUsersResponse rouletteUsersResponse = await GlobalObjects._TwitchAPI.Helix.Users.GetUsersAsync(logins: new List<string> { $"{messageInputs[1].ToLower()}" });
 
+                            //checking if nothing was sent back. means that no user was found with that username parameter
                             if (rouletteUsersResponse == null || rouletteUsersResponse.Users.Length == 0)
                             {
                                 string outputMessage = $"No users could be found with the name \"{messageInputs[1]}\" on Twitch";
@@ -191,6 +200,7 @@ namespace TwitchBot
                                 throw new Exception($"No users returned by Twitch after searching with command prompt \"{messageInputs[1]}\"");
                             }
 
+                            //trigger the actual score lookup method with the requested user string
                             FirstCommand(rouletteUsersResponse.Users[0].Id, rouletteUsersResponse.Users[0].DisplayName, e.MessageId);
                         }
                         catch (Exception except)
