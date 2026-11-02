@@ -136,14 +136,6 @@ using static System.Net.Mime.MediaTypeNames;
 //get command for user to look up roulette score for either themself or another user
 
 
-
-//look into if twitch has an api event linked to the "ads in xx:xx countdown"
-    //make it so timer that triggers check method is always running
-    //idea: when warning is triggered, stop timer and only restart when next ad break is finished
-        //would then require taking out all the timer.stop() and timer.dispose() calls when error is encountered
-        //also make a call in the CloseEverything() method to stop and dispose of the current warning timer (wouldn't want it still checking if user has stopped bot but app is still running)
-
-
 //--------IMPLEMENTED BUT NOT TESTED--------
 
 //have more checks for invalid oauth token
@@ -157,6 +149,14 @@ using static System.Net.Mime.MediaTypeNames;
 //possibly transition from frosty tools handling raids to instead be through the bot
 //would need a little "xyz had raided" message (w/ what they were doing?) and an automatic shoutout for the streamer
 
+
+//look into if twitch has an api event linked to the "ads in xx:xx countdown"
+//make it so timer that triggers check method is always running
+//ad warning: if the warning is under 1 minute, convert to seconds (currently set to output "under 1 minute")
+    //maybe just make it not output if that close to an ad break?
+
+//also there is variance in the warning to an ad break (e.g. 3 min > 2 min > 1 min > 3 min again)
+    //could have been from internet dying midway through stream. could also equally have been from a timing/logic issue
 
 //---------------------------------------------------------------------------------------------------------------------------
 namespace TwitchBot

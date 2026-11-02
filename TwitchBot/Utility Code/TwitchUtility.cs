@@ -242,7 +242,7 @@ namespace TwitchBot.Utility_Code
             {
                 //start a timer to check for an ad break every x minutes
                 //use a larger value to have less timer checks (meaning less API calls to twitch)
-                adBreakWarningTimer = new System.Timers.Timer(ADBREAKTIMERINTERVALMINUTES * 60);
+                adBreakWarningTimer = new System.Timers.Timer(ADBREAKTIMERINTERVALMINUTES * 60000);
 
                 adBreakWarningTimer.AutoReset = true;  //makes it so timer continually triggers and restarts (used so bot can axtively check how far it is from the next ad break)
                 adBreakWarningTimer.Elapsed += AdBreakWarning;
@@ -259,10 +259,12 @@ namespace TwitchBot.Utility_Code
         {
             Trace.WriteLine(DateTime.Now.ToString() + $"\tAdBreakWarning timer elapsed. Checking if time to next ad break is under <{Properties.Settings.Default.WarningMinutesBeforeTwitchAdBreak} minutes");
 
-            //get current utc time before polling twitch for next ad in schedule to help ensure difference between the 2 is as accurate as possible
-            DateTimeOffset currUtcDateTime = DateTimeOffset.UtcNow;
+            DateTimeOffset currUtcDateTime;
 
             GetAdScheduleResponse adScheduleResp;
+
+            //--get info about next scheduled ad from twitch
+            //have to check every time to factor in if a snooze has occured, pushing back the schedule ad break by 5 minutes each time
             try
             {
                 //have to check for when the next ad is scheduled to see if the ad break has been slept by 5 minutes since last check
@@ -287,17 +289,19 @@ namespace TwitchBot.Utility_Code
 
                 return;
             }
-
+            
 
             long nextAdBreakSeconds;
+
+            //get current utc time right before performing operations on this value
+            currUtcDateTime = DateTimeOffset.UtcNow;
+
+            //--get the time delta between next scheduled ad info from twitch and the current time
 
             //from this point on, retreived "NextAdAt" value is a set value
             //check if value retreived can be immediately parsed into a DateTimeOffset object
             if (DateTimeOffset.TryParse(adScheduleResp.Data[0].NextAdAt, out DateTimeOffset nextAdDateTime))
             {
-                //An exception of type 'System.FormatException' occurred in System.Private.CoreLib.dll but was not handled in user code
-                //String '1792633301' was not recognized as a valid DateTime.
-
                 TimeSpan timeToNextAdBreak = nextAdDateTime - currUtcDateTime;
 
                 //forcing round down as opposed to normal rounding as if the next ad break time is very close to the set warning threshold then being slightly under that is better
@@ -310,6 +314,7 @@ namespace TwitchBot.Utility_Code
                 //check if retreived value is millisenconds since epoch instead of a DateTime-parsable date string
                 if (long.TryParse(adScheduleResp.Data[0].NextAdAt, out long parsedNextDateAtSeconds))
                 {
+                    
                     nextAdBreakSeconds = parsedNextDateAtSeconds - currUtcDateTime.ToUnixTimeSeconds();
                 }
                 //unknown value retreived for nextAdAt. stop timer
@@ -321,12 +326,7 @@ namespace TwitchBot.Utility_Code
                 }
             }
 
-            WPFUtility.WriteToLog($"TESTING-- " +
-                $"nextAdBreakSeconds: {nextAdBreakSeconds}\t" +
-                $"nextDateSeconds:{adScheduleResp.Data[0].NextAdAt.ToString()}\t" +
-                $"currTime(toUnixSeconds):{currUtcDateTime.ToUnixTimeSeconds()}");
-            WPFUtility.WriteToLog($"TESTING 2-- nextAdSeconds: {nextAdBreakSeconds}\tnextAdBreakMinutes: {nextAdBreakSeconds / 60.0}\tnextAdBreakHours: {nextAdBreakSeconds / 3600.0}");
-
+            //--check if current time delta is <= the set trigger range to send out a warning message to twitch chat about the upcoming ad break
             try
             {
                 if(nextAdBreakSeconds <= 0)
@@ -338,15 +338,24 @@ namespace TwitchBot.Utility_Code
                 //check if scheduled time until next ad break is x minutes in the future
                 if (nextAdBreakSeconds <= Properties.Settings.Default.WarningMinutesBeforeTwitchAdBreak * 60)
                 {
-                    WPFUtility.WriteToLog($"AdBreakWarning trigger threshold reached. Stopping timer until next ad break.");
+                    WPFUtility.WriteToLog($"AdBreakWarning trigger threshold reached. Delta of {nextAdBreakSeconds} seconds vs threshold of {Properties.Settings.Default.WarningMinutesBeforeTwitchAdBreak * 60} seconds. Stopping timer until next ad break.");
 
                     adBreakWarningTimer.Stop();
 
-                    //get a rounded number to display specifically how many minutes are left until ads (useful if the timer is slow and doesn't trigger right at the warning threshold)
-                    //added d to 60 to avoid an ambiguous rounding call between decimal and double. 'd' implies 60 is a decimal
-                    int roundedMinutesToAdBreak = (int)Math.Round(nextAdBreakSeconds / 60d);
+                    string adWarningMessage = $"Heads up, there is a scheduled ad break in ";
 
-                    string adWarningMessage = $"Heads up, there is a scheduled ad break in roughly {roundedMinutesToAdBreak} minutes";
+                    if (nextAdBreakSeconds < 60)
+                    {
+                        adWarningMessage += $"under 1 minute";
+                    }
+                    else
+                    {
+                        //get a rounded number to display specifically how many minutes are left until ads (useful if the timer is slow and doesn't trigger right at the warning threshold)
+                        //added d to 60 to avoid an ambiguous rounding call between decimal and double. 'd' implies 60 is a decimal
+                        int roundedMinutesToAdBreak = (int)Math.Round(nextAdBreakSeconds / 60d);
+
+                        adWarningMessage += $"roughly {roundedMinutesToAdBreak} minutes";
+                    }
 
                     TwitchUtility.SendChatMessage(GlobalObjects._TwitchAPIBotAccount, GlobalObjects.TwitchMessageBotUserId, GlobalObjects.TwitchBroadcasterUserId, adWarningMessage, sendMessageAsChatBot: true);
                 }
@@ -354,15 +363,19 @@ namespace TwitchBot.Utility_Code
             catch(Exception except)
             {
                 WPFUtility.WriteToLog($"AdBreakWarning act upon time delta Error: {except.Message}");
+
+                StopAdWarningTimer();
+
+                return;
             }
         }
 
         public static void StopAdWarningTimer()
         {
-            Trace.WriteLine(DateTime.Now.ToString() + ($"Stopping ad warning timer..."));
-
             if(adBreakWarningTimer != null)
             {
+                Trace.WriteLine(DateTime.Now.ToString() + ($"Stopping ad warning timer..."));
+
                 adBreakWarningTimer.Stop();
                 adBreakWarningTimer.Dispose();
             }

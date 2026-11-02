@@ -15,6 +15,7 @@ using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomReward;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomRewardRedemptionStatus;
 using TwitchLib.Api.Helix.Models.Channels.GetChannelInformation;
 using TwitchLib.Api.Helix.Models.Polls.CreatePoll;
+using TwitchLib.Api.Helix.Models.Predictions.GetPredictions;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
 using TwitchLib.EventSub.Core.SubscriptionTypes.Channel;
 using TwitchLib.EventSub.Websockets.Core.EventArgs;
@@ -419,7 +420,6 @@ namespace TwitchBot
 
         async static private void CreatePrediction(ChannelPointsCustomRewardRedemption e)
         {
-            bool validEntry = true;
             List<string> splitInput = new List<string>();
             Regex regexPattern = new Regex(@"\[(.*?)\]");
 
