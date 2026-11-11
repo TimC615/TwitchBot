@@ -421,19 +421,27 @@ namespace TwitchBot
         async static private void CreatePrediction(ChannelPointsCustomRewardRedemption e)
         {
             List<string> splitInput = new List<string>();
-            Regex regexPattern = new Regex(@"\[(.*?)\]");
+            //Regex regexPattern = new Regex(@"\[(.*?)\]");
 
-            //use regex to match substrings contained within "[]". afterwards, trim out those square brackets to only have the containing user text remaining
-            foreach(Match match in regexPattern.Matches(e.UserInput))
+            ////use regex to match substrings contained within "[]". afterwards, trim out those square brackets to only have the containing user text remaining
+            //foreach(Match match in regexPattern.Matches(e.UserInput))
+            //{
+            //    WPFUtility.WriteToLog($"Entry: {match.Value}");
+
+
+            //    char[] entryTrimChars = { '[', ']' };
+            //    string cleanedEntry = match.Value.Trim(entryTrimChars);
+
+            //    if(!string.IsNullOrEmpty(cleanedEntry))
+            //        splitInput.Add(cleanedEntry);
+            //}
+
+            foreach (string input in e.UserInput.Split('|'))
             {
-                WPFUtility.WriteToLog($"Entry: {match.Value}");
+                string trimmed = input.Trim();
 
-
-                char[] entryTrimChars = { '[', ']' };
-                string cleanedEntry = match.Value.Trim(entryTrimChars);
-
-                if(!string.IsNullOrEmpty(cleanedEntry))
-                    splitInput.Add(cleanedEntry);
+                if (!string.IsNullOrEmpty(trimmed))
+                    splitInput.Add(trimmed);
             }
 
             UpdateCustomRewardRedemptionStatusRequest rewardRedemptionStatus = new UpdateCustomRewardRedemptionStatusRequest();

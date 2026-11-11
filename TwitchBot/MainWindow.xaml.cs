@@ -135,7 +135,6 @@ using static System.Net.Mime.MediaTypeNames;
 
 //get command for user to look up roulette score for either themself or another user
 
-
 //--------IMPLEMENTED BUT NOT TESTED--------
 
 //have more checks for invalid oauth token
@@ -501,8 +500,7 @@ namespace TwitchBot
             createReward.Title = "Create a Prediction";
             createReward.Cost = 500;
             createReward.BackgroundColor = "#A1849E";
-            createReward.Prompt = "Create a custom poll for whatever you want. Please enter your prediction in the format of \"[prompt] [choice 1] [choice 2] etc... | " +
-                "You have to include the square brackets in your response and you can have between 2 and 5 total choices. ";
+            createReward.Prompt = "Create a custom poll for whatever you want with between 2 and 5 options. Please enter your prediction in the format of \"prompt | choice 1 | choice 2 | etc...\"";
             createReward.IsGlobalCooldownEnabled = true;
             createReward.GlobalCooldownSeconds = 20;
             createReward.IsEnabled = true;
