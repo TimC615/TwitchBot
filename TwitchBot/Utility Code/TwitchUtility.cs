@@ -71,7 +71,7 @@ namespace TwitchBot.Utility_Code
     class TwitchUtility
     {
         private static System.Timers.Timer adBreakWarningTimer;
-        private static int ADBREAKTIMERINTERVALMINUTES = 1; //set how many minutes between a check of whether the current time relative to the next scheduled ad is below the set threshold 
+        private static int ADBREAKTIMERINTERVALMINUTES = 2; //set how many minutes between a check of whether the current time relative to the next scheduled ad is below the set threshold 
         //private static double PREADBREAKWARNINGMINUTES = 5;   //ideally have this number <10 as twitch is currently set to give me an ad warning at 10 minutes (gives time to sleep without warning being sent)
 
 
@@ -219,20 +219,8 @@ namespace TwitchBot.Utility_Code
             //    "Ad break is now done!", 
             //    sendMessageAsChatBot: true);
 
-            try
-            {
-                //start a timer to check for an ad break every x minutes
-                //use a larger value to have less timer checks (meaning less API calls to twitch)
-                adBreakWarningTimer = new System.Timers.Timer(5 * 60000);
-                adBreakWarningTimer.AutoReset = true;  //makes it so timer continually triggers and restarts (used so bot can axtively check how far it is from the next ad break)
-                adBreakWarningTimer.Elapsed += AdBreakWarning;
-                adBreakWarningTimer.Start();
+            InitializeAdBreakWarningTimer();
             }
-            catch (Exception except)
-            {
-                WPFUtility.WriteToLog($"Error initializing ad warning timer: {except.Message}");
-            }
-        }
 
         public static async void InitializeAdBreakWarningTimer()
         {
@@ -280,7 +268,7 @@ namespace TwitchBot.Utility_Code
                     throw new Exception("GetAdSchedule.Data was null");
                 if (adScheduleResp.Data.Length == 0)
                     throw new Exception("GetAdSchedule.Data.Length was 0");
-                if (string.IsNullOrEmpty(adScheduleResp.Data[0].NextAdAt))
+                if (string.IsNullOrEmpty(adScheduleResp.Data[0].NextAdAt) || adScheduleResp.Data[0].NextAdAt == "0")
                     throw new Exception("GetAdSchedule.Data[0].NextAdAt was null or empty. (Check if stream you are asking the schedule for is offline)");
             }
             catch(Exception except)
@@ -338,8 +326,8 @@ namespace TwitchBot.Utility_Code
                 //check if scheduled time until next ad break is x minutes in the future
                 if (nextAdBreakSeconds <= Properties.Settings.Default.WarningMinutesBeforeTwitchAdBreak * 60)
                 {
-                    WPFUtility.WriteToLog($"AdBreakWarning trigger threshold reached. Delta of {nextAdBreakSeconds} seconds vs threshold of {Properties.Settings.Default.WarningMinutesBeforeTwitchAdBreak * 60} seconds. Stopping timer until next ad break.");
-
+                    //WPFUtility.WriteToLog($"AdBreakWarning trigger threshold reached. Delta of {nextAdBreakSeconds} seconds vs threshold of {Properties.Settings.Default.WarningMinutesBeforeTwitchAdBreak * 60} seconds. Stopping timer until next ad break.");
+                    WPFUtility.WriteToLog($"AdBreakWarning trigger threshold reached. Stopping timer until next ad break.");
                     adBreakWarningTimer.Stop();
 
                     string adWarningMessage = $"Heads up, there is a scheduled ad break in ";

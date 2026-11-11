@@ -153,6 +153,8 @@ using static System.Net.Mime.MediaTypeNames;
 //make it so timer that triggers check method is always running
 //ad warning: if the warning is under 1 minute, convert to seconds (currently set to output "under 1 minute")
     //maybe just make it not output if that close to an ad break?
+    //maybe add specific check to see if stream is actually live? (aside from the time to next ad being 0 if offline)
+        //saves on error messages in log
 
 //also there is variance in the warning to an ad break (e.g. 3 min > 2 min > 1 min > 3 min again)
     //could have been from internet dying midway through stream. could also equally have been from a timing/logic issue
